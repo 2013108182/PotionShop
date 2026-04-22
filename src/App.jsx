@@ -156,11 +156,6 @@ export default function PotionShopSim() {
   const [reputation, setReputation] = useState(50);
   const [inventory, setInventory] = useState({ hintIngredient: 0, hintSlot: 0 });
   
-  // 재료 인벤토리 추가
-  const [ingredientsQty, setIngredientsQty] = useState(
-    Object.fromEntries(INGREDIENTS.map(item => [item.id, 20]))
-  );
-  
   const [activeItemMode, setActiveItemMode] = useState(null);
   const [knownIngredients, setKnownIngredients] = useState({});
   const [knownSlots, setKnownSlots] = useState([]);
@@ -188,7 +183,7 @@ export default function PotionShopSim() {
 
   useEffect(() => {
     if (appState === 'shop' || appState === 'day_end' || appState === 'morning_shop') {
-      const saveData = { appState, day, money, reputation, inventory, ingredientsQty, dailyCustomers, currentCustomerIndex };
+      const saveData = { appState, day, money, reputation, inventory, dailyCustomers, currentCustomerIndex };
       localStorage.setItem(SAVE_KEY, JSON.stringify(saveData));
       setHasSaveData(true);
       
@@ -196,7 +191,7 @@ export default function PotionShopSim() {
       const timer = setTimeout(() => setSaveIndicator(false), 2000);
       return () => clearTimeout(timer);
     }
-  }, [appState, day, money, reputation, inventory, ingredientsQty, dailyCustomers, currentCustomerIndex]);
+  }, [appState, day, money, reputation, inventory, dailyCustomers, currentCustomerIndex]);
 
   useEffect(() => {
     if (tutorial.isActive) {
@@ -215,7 +210,6 @@ export default function PotionShopSim() {
       setMoney(data.money);
       setReputation(data.reputation);
       setInventory(data.inventory);
-      if (data.ingredientsQty) setIngredientsQty(data.ingredientsQty);
       setDailyCustomers(data.dailyCustomers || []);
       setCurrentCustomerIndex(data.currentCustomerIndex || 0);
       setAppState(data.appState === 'morning_shop' ? 'morning_shop' : 'shop');
@@ -228,7 +222,6 @@ export default function PotionShopSim() {
     setMoney(50);
     setReputation(50);
     setInventory({ hintIngredient: 0, hintSlot: 0 });
-    setIngredientsQty(Object.fromEntries(INGREDIENTS.map(item => [item.id, 20])));
     setHasSeenTutorial(false);
     startNewDay(1, null);
   };
@@ -310,13 +303,6 @@ export default function PotionShopSim() {
     if (money < cost) return; 
     setMoney(prev => prev - cost);
     setInventory(prev => ({ ...prev, [type]: prev[type] + 1 }));
-  };
-
-  const buyIngredient = (id) => {
-    const item = INGREDIENTS.find(i => i.id === id);
-    if (money < item.price) return;
-    setMoney(prev => prev - item.price);
-    setIngredientsQty(prev => ({ ...prev, [id]: prev[id] + 1 }));
   };
 
   const moveToNextCustomer = () => {
@@ -411,9 +397,6 @@ export default function PotionShopSim() {
     if (currentGuess.includes(id)) {
       setCurrentGuess(currentGuess.map(itemId => itemId === id ? null : itemId));
     } else if (currentGuess.includes(null)) {
-      // 2일차부터는 재고 확인
-      if (day > 1 && ingredientsQty[id] <= 0) return;
-
       const newGuess = [...currentGuess];
       if (selectedSlotIndex !== null && newGuess[selectedSlotIndex] === null) {
         newGuess[selectedSlotIndex] = id;
@@ -453,17 +436,6 @@ export default function PotionShopSim() {
     if (currentGuess.includes(null) || brewPhase !== 'idle') return;
     setActiveItemMode(null);
     setSelectedSlotIndex(null);
-
-    // 2일차부터 재료 실제 차감
-    if (day > 1) {
-      setIngredientsQty(prev => {
-        const next = { ...prev };
-        currentGuess.forEach(id => {
-          next[id] -= 1;
-        });
-        return next;
-      });
-    }
 
     setBrewPhase('heating');
     setEffectText('🔥 끓이는 중...');
@@ -602,7 +574,6 @@ export default function PotionShopSim() {
           <p className="text-slate-400 leading-relaxed bg-slate-800 p-3 sm:p-4 rounded-lg border border-slate-700 text-xs sm:text-sm mb-6">
             손님들의 증상을 듣고 알맞은 마법약을 처방한 뒤,<br/>
             <span className="text-purple-300 font-bold">고정된 마법약 레시피</span>를 추리하여 완벽하게 조제하세요!<br/><br/>
-            <span className="text-yellow-400 font-bold">2일차부터는 아침마다 재료를 구매해야 합니다.</span><br/>
             오진하거나 조제에 실패하면 명성이 깎이며 파산할 수 있습니다.
           </p>
           
@@ -670,28 +641,9 @@ export default function PotionShopSim() {
         {renderTopBar()}
         <div className="flex-1 bg-slate-800 rounded-2xl border border-slate-700 p-4 sm:p-6 shadow-xl flex flex-col max-w-2xl mx-auto w-full mt-2 sm:mt-4">
           <h2 className="text-xl sm:text-2xl font-bold text-yellow-400 mb-2 flex items-center gap-2"><ShoppingBag className="w-5 h-5 sm:w-6 sm:h-6"/> 아침 시장</h2>
-          <p className="text-slate-400 text-xs sm:text-sm mb-4 sm:mb-6">오늘 영업을 위해 재료와 아이템을 준비하세요.</p>
+          <p className="text-slate-400 text-xs sm:text-sm mb-4 sm:mb-6">오늘 영업을 위해 도구를 준비하세요.</p>
           
           <div className="flex-1 overflow-y-auto pr-1 sm:pr-2 custom-scrollbar space-y-4 sm:space-y-6">
-            <div>
-              <h3 className="text-base sm:text-lg font-bold text-purple-300 mb-2 sm:mb-3 border-b border-slate-700 pb-2">재료 구매</h3>
-              <div className="grid grid-cols-3 sm:grid-cols-5 gap-2 sm:gap-3">
-                {INGREDIENTS.map(item => (
-                  <button 
-                    key={item.id}
-                    onClick={() => buyIngredient(item.id)}
-                    disabled={money < item.price}
-                    className="bg-slate-900 border border-slate-700 rounded-xl p-2 sm:p-3 flex flex-col items-center justify-center hover:border-yellow-500 transition-colors disabled:opacity-50"
-                  >
-                    <span className="text-xl sm:text-2xl mb-1">{item.emoji}</span>
-                    <span className="text-[9px] sm:text-[10px] text-slate-300 mb-1 text-center leading-tight break-keep">{item.name}</span>
-                    <span className="text-[10px] sm:text-xs font-bold text-yellow-400 mb-1">{item.price} G</span>
-                    <span className="text-[9px] sm:text-[10px] text-slate-400 bg-slate-800/80 px-1.5 py-0.5 rounded border border-slate-700 w-full text-center">보유: {ingredientsQty[item.id]}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-
             <div>
               <h3 className="text-base sm:text-lg font-bold text-blue-300 mb-2 sm:mb-3 border-b border-slate-700 pb-2">도구 구매</h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
@@ -935,9 +887,6 @@ export default function PotionShopSim() {
                   {currentCustomer?.potionName}
                 </p>
               </div>
-              <p className="text-[10px] sm:text-sm text-red-400 font-semibold animate-pulse bg-red-900/30 px-2 py-1 sm:px-3 sm:py-1 rounded-full whitespace-nowrap">
-                기회: {currentCustomer?.maxAttempts - history.length}회 남음
-              </p>
             </div>
 
             <div className="bg-slate-800 p-2 sm:p-3 rounded-xl border border-slate-700 flex flex-wrap gap-2 sm:gap-4 items-center shrink-0">
@@ -989,36 +938,22 @@ export default function PotionShopSim() {
                     const tutAllowedId = getTutorialAllowedIngredient();
                     const isTutTarget = tutorial.isActive && tutAllowedId === item.id;
                     const isTutDisabled = tutorial.isActive && tutAllowedId !== item.id && !isSelected;
-                    
-                    const availableQty = day === 1 ? '∞' : ingredientsQty[item.id];
-                    const outOfStock = day > 1 && ingredientsQty[item.id] <= 0;
 
                     return (
                       <button
                         key={item.id}
                         onClick={() => handleIngredientClick(item.id)}
-                        disabled={minigameResult !== null || brewPhase !== 'idle' || (!isItemTarget && !isSelected && !currentGuess.includes(null)) || (activeItemMode === 'hintIngredient' && isKnown) || isTutDisabled || (outOfStock && !isSelected)}
+                        disabled={minigameResult !== null || brewPhase !== 'idle' || (!isItemTarget && !isSelected && !currentGuess.includes(null)) || (activeItemMode === 'hintIngredient' && isKnown) || isTutDisabled}
                         className={`
                           relative p-1.5 sm:p-2 rounded-lg sm:rounded-xl flex flex-col items-center justify-center transition-all duration-300 border-2
                           ${isSelected && !activeItemMode ? 'bg-slate-700 border-purple-500 shadow-[0_0_10px_rgba(168,85,247,0.5)] transform scale-105' : 'bg-slate-900 border-slate-700'}
                           ${isItemTarget ? 'hover:border-indigo-400 hover:shadow-[0_0_10px_rgba(99,102,241,0.5)] cursor-crosshair' : ''}
-                          ${outOfStock && !isSelected ? 'opacity-40 cursor-not-allowed grayscale' : (!activeItemMode && !isSelected && !currentGuess.includes(null)) || isTutDisabled ? 'opacity-50 cursor-not-allowed' : 'hover:-translate-y-1'}
+                          ${(!activeItemMode && !isSelected && !currentGuess.includes(null)) || isTutDisabled ? 'opacity-50 cursor-not-allowed' : 'hover:-translate-y-1'}
                           ${isTutTarget ? 'ring-4 ring-indigo-400 animate-pulse border-indigo-400 bg-indigo-900/30' : ''}
                         `}
                       >
                         <span className="text-xl sm:text-2xl mb-0.5 sm:mb-1">{item.emoji}</span>
                         <span className="text-[8px] sm:text-[10px] text-center text-slate-300 leading-tight break-keep">{item.name}</span>
-                        
-                        {day > 1 && (
-                          <div className={`text-[8px] sm:text-[9px] font-bold mt-1 px-1.5 py-0.5 rounded ${outOfStock && !isSelected ? 'bg-red-900/80 text-red-300' : 'bg-slate-800 text-slate-300'}`}>
-                            {availableQty}개
-                          </div>
-                        )}
-                        {day === 1 && (
-                          <div className="text-[8px] sm:text-[9px] font-bold mt-1 px-1.5 py-0.5 rounded bg-slate-800 text-slate-300">
-                            ∞개
-                          </div>
-                        )}
                         
                         {isKnown && (
                           <div className="absolute -top-1 -right-1 sm:-top-2 sm:-right-2 bg-slate-800 rounded-full w-4 h-4 sm:w-6 sm:h-6 flex items-center justify-center border border-slate-600 shadow-lg text-[8px] sm:text-xs">
@@ -1081,21 +1016,28 @@ export default function PotionShopSim() {
                   })}
                 </div>
                 
-                <button
-                  onClick={handleBrew}
-                  disabled={currentGuess.includes(null) || minigameResult !== null || brewPhase !== 'idle' || activeItemMode !== null || (tutorial.isActive && !tutorial.step.startsWith('brew_'))}
-                  className={`
-                    w-full py-3 sm:py-4 font-extrabold rounded-xl transition-all shadow-lg flex items-center justify-center gap-2 sm:gap-3 text-sm sm:text-lg z-10 relative
-                    ${(brewPhase !== 'idle' || activeItemMode || (tutorial.isActive && !tutorial.step.startsWith('brew_'))) ? 'bg-slate-600 text-slate-400 cursor-not-allowed' : 'bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white hover:shadow-[0_0_15px_rgba(168,85,247,0.4)]'}
-                    ${tutorial.isActive && tutorial.step.startsWith('brew_') ? 'ring-4 ring-indigo-400 animate-pulse' : ''}
-                  `}
-                >
-                  {brewPhase === 'idle' ? (
-                    <><Flame className="w-4 h-4 sm:w-6 sm:h-6 text-orange-400" /> 조합하기</>
-                  ) : (
-                    <><FlaskConical className="w-4 h-4 sm:w-6 sm:h-6 animate-spin" /> 연성 중...</>
-                  )}
-                </button>
+                <div className="w-full z-10 relative flex flex-col gap-2.5">
+                  <div className="text-center">
+                    <span className="text-[10px] sm:text-sm text-red-400 font-bold animate-pulse bg-red-900/30 px-3 py-1 rounded-full whitespace-nowrap">
+                      남은 기회: {currentCustomer?.maxAttempts - history.length}회
+                    </span>
+                  </div>
+                  <button
+                    onClick={handleBrew}
+                    disabled={currentGuess.includes(null) || minigameResult !== null || brewPhase !== 'idle' || activeItemMode !== null || (tutorial.isActive && !tutorial.step.startsWith('brew_'))}
+                    className={`
+                      w-full py-3 sm:py-4 font-extrabold rounded-xl transition-all shadow-lg flex items-center justify-center gap-2 sm:gap-3 text-sm sm:text-lg
+                      ${(brewPhase !== 'idle' || activeItemMode || (tutorial.isActive && !tutorial.step.startsWith('brew_'))) ? 'bg-slate-600 text-slate-400 cursor-not-allowed' : 'bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white hover:shadow-[0_0_15px_rgba(168,85,247,0.4)]'}
+                      ${tutorial.isActive && tutorial.step.startsWith('brew_') ? 'ring-4 ring-indigo-400 animate-pulse' : ''}
+                    `}
+                  >
+                    {brewPhase === 'idle' ? (
+                      <><Flame className="w-4 h-4 sm:w-6 sm:h-6 text-orange-400" /> 조합하기</>
+                    ) : (
+                      <><FlaskConical className="w-4 h-4 sm:w-6 sm:h-6 animate-spin" /> 연성 중...</>
+                    )}
+                  </button>
+                </div>
               </div>
             </div>
 
