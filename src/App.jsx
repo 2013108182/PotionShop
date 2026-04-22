@@ -3,7 +3,7 @@ import {
   RotateCcw, FlaskConical, Sparkles, AlertCircle, Flame, 
   Store, Coins, Star, Users, ArrowRight, BookOpen,
   Search, Eye, ShoppingBag, X, PackageOpen, Target,
-  ScrollText, CheckCircle2, XCircle, Info, Save
+  ScrollText, CheckCircle2, XCircle, Info, Save, Lock
 } from 'lucide-react';
 
 const INGREDIENTS = [
@@ -19,24 +19,38 @@ const INGREDIENTS = [
   { id: '10', emoji: '🍄', name: '별빛 버섯', price: 7, color: 'bg-orange-100 border-orange-300 text-orange-700' }
 ];
 
+// 명성(reqRep)에 따른 해금 시스템 추가
 const POTION_DB = {
-  "깊은 밤의 숙면 물약": { slots: 3, maxAttempts: 8, baseReward: 35, recipe: ['8', '2', '9'] },
-  "올빼미의 시야 물약": { slots: 3, maxAttempts: 8, baseReward: 35, recipe: ['9', '5', '10'] },
-  "천상의 목소리 영약": { slots: 3, maxAttempts: 8, baseReward: 40, recipe: ['4', '7', '2'] },
-  "광속의 깃털 물약": { slots: 3, maxAttempts: 8, baseReward: 45, recipe: ['4', '3', '1'] },
-  "신속의 치유 물약": { slots: 4, maxAttempts: 10, baseReward: 50, recipe: ['6', '7', '2', '4'] },
-  "맹독성 가스 물약": { slots: 4, maxAttempts: 10, baseReward: 55, recipe: ['7', '3', '5', '8'] },
-  "마력 폭주 영약": { slots: 4, maxAttempts: 10, baseReward: 60, recipe: ['10', '6', '3', '1'] },
-  "거인의 힘 물약": { slots: 4, maxAttempts: 10, baseReward: 65, recipe: ['3', '1', '7', '5'] },
-  "그림자 걸음 물약": { slots: 4, maxAttempts: 10, baseReward: 70, recipe: ['8', '9', '5', '10'] },
-  "눈부신 오로라 물약": { slots: 5, maxAttempts: 12, baseReward: 85, recipe: ['9', '10', '4', '6', '2'] },
-  "용의 숨결 물약": { slots: 5, maxAttempts: 12, baseReward: 90, recipe: ['3', '1', '7', '8', '2'] },
-  "시간 역행의 영약": { slots: 5, maxAttempts: 12, baseReward: 95, recipe: ['9', '6', '10', '4', '5'] },
-  "태양 극복의 영약": { slots: 5, maxAttempts: 12, baseReward: 100, recipe: ['5', '9', '8', '1', '6'] }
+  // 3칸 물약 (시작~초반)
+  "깊은 밤의 숙면 물약": { slots: 3, maxAttempts: 8, baseReward: 35, reqRep: 0, recipe: ['8', '2', '9'] },
+  "올빼미의 시야 물약": { slots: 3, maxAttempts: 8, baseReward: 35, reqRep: 0, recipe: ['9', '5', '10'] },
+  "행운의 네잎클로버 물약": { slots: 3, maxAttempts: 8, baseReward: 40, reqRep: 0, recipe: ['7', '4', '2'] },
+  "천상의 목소리 영약": { slots: 3, maxAttempts: 8, baseReward: 40, reqRep: 20, recipe: ['4', '7', '2'] },
+  "거짓말 탐지 영약": { slots: 3, maxAttempts: 8, baseReward: 45, reqRep: 30, recipe: ['2', '9', '5'] },
+  "광속의 깃털 물약": { slots: 3, maxAttempts: 8, baseReward: 45, reqRep: 40, recipe: ['4', '3', '1'] },
+  
+  // 4칸 물약 (중반부 해금)
+  "신속의 치유 물약": { slots: 4, maxAttempts: 10, baseReward: 50, reqRep: 60, recipe: ['6', '7', '2', '4'] },
+  "맹독성 가스 물약": { slots: 4, maxAttempts: 10, baseReward: 55, reqRep: 70, recipe: ['7', '3', '5', '8'] },
+  "물갈퀴 변이 물약": { slots: 4, maxAttempts: 10, baseReward: 60, reqRep: 80, recipe: ['5', '3', '7', '2'] },
+  "마력 폭주 영약": { slots: 4, maxAttempts: 10, baseReward: 60, reqRep: 90, recipe: ['10', '6', '3', '1'] },
+  "거인의 힘 물약": { slots: 4, maxAttempts: 10, baseReward: 65, reqRep: 100, recipe: ['3', '1', '7', '5'] },
+  "사랑의 묘약": { slots: 4, maxAttempts: 10, baseReward: 70, reqRep: 110, recipe: ['1', '4', '2', '10'] },
+  "그림자 걸음 물약": { slots: 4, maxAttempts: 10, baseReward: 75, reqRep: 120, recipe: ['8', '9', '5', '10'] },
+  "투명화 영약": { slots: 4, maxAttempts: 10, baseReward: 80, reqRep: 140, recipe: ['8', '9', '4', '5'] },
+  
+  // 5칸 물약 (후반부 해금)
+  "눈부신 오로라 물약": { slots: 5, maxAttempts: 12, baseReward: 85, reqRep: 180, recipe: ['9', '10', '4', '6', '2'] },
+  "기억 소거 물약": { slots: 5, maxAttempts: 12, baseReward: 90, reqRep: 200, recipe: ['8', '5', '9', '2', '4'] },
+  "용의 숨결 물약": { slots: 5, maxAttempts: 12, baseReward: 95, reqRep: 230, recipe: ['3', '1', '7', '8', '2'] },
+  "시간 역행의 영약": { slots: 5, maxAttempts: 12, baseReward: 100, reqRep: 260, recipe: ['9', '6', '10', '4', '5'] },
+  "태양 극복의 영약": { slots: 5, maxAttempts: 12, baseReward: 110, reqRep: 300, recipe: ['5', '9', '8', '1', '6'] },
+  "만병통치약": { slots: 5, maxAttempts: 12, baseReward: 130, reqRep: 350, recipe: ['1', '2', '3', '4', '6'] }
 };
 
-const POTION_CATALOG = Object.keys(POTION_DB);
+const POTION_CATALOG = Object.keys(POTION_DB).sort((a, b) => POTION_DB[a].reqRep - POTION_DB[b].reqRep);
 
+// 확장된 고객 및 퀘스트 데이터
 const CUSTOMER_DATA = [
   {
     type: 'villager', emoji: '👨‍🌾', name: '마을 농부',
@@ -44,7 +58,9 @@ const CUSTOMER_DATA = [
       { dialogue: "요즘 잠을 통 못 자서... 푹 잘 수 있는 약이 필요해요.", potionName: "깊은 밤의 숙면 물약" },
       { dialogue: "장작을 패야 하는데 기운이 없구려. 힘이 솟는 약을 지어주시오.", potionName: "거인의 힘 물약" },
       { dialogue: "밭일 하다가 허리를 크게 다쳤소. 금방 낫는 약이 필요하오.", potionName: "신속의 치유 물약" },
-      { dialogue: "잡초가 너무 무성해서 골치요. 싹 다 말라 죽일 독한 약 없소?", potionName: "맹독성 가스 물약" }
+      { dialogue: "잡초가 너무 무성해서 골치요. 싹 다 말라 죽일 독한 약 없소?", potionName: "맹독성 가스 물약" },
+      { dialogue: "올해 농사가 흉년일까 걱정이오. 밭에 뿌릴 행운의 약이 필요하오.", potionName: "행운의 네잎클로버 물약" },
+      { dialogue: "마을에 전염병이 돌고 있소! 무슨 병이든 낫게 하는 기적의 약이 필요하오!", potionName: "만병통치약" }
     ]
   },
   {
@@ -53,7 +69,8 @@ const CUSTOMER_DATA = [
       { dialogue: "내일 왕궁 공연이 있소. 목소리가 청아해지는 약이 필요하오!", potionName: "천상의 목소리 영약" },
       { dialogue: "사흘 밤낮으로 작곡을 해야 하오. 마력을 폭발시켜 잠을 쫓고 싶소.", potionName: "마력 폭주 영약" },
       { dialogue: "무대에서 돋보이고 싶소! 온몸에서 신비로운 빛이 나는 약을 주시오!", potionName: "눈부신 오로라 물약" },
-      { dialogue: "순식간에 다음 마을로 가서 공연해야 하오. 깃털처럼 가볍고 빨라지는 약을 주시오.", potionName: "광속의 깃털 물약" }
+      { dialogue: "순식간에 다음 마을로 가서 공연해야 하오. 깃털처럼 가볍고 빨라지는 약을 주시오.", potionName: "광속의 깃털 물약" },
+      { dialogue: "저 마을 촌장의 딸에게 첫눈에 반했소... 그녀의 마음을 얻을 약이 필요하오.", potionName: "사랑의 묘약" }
     ]
   },
   {
@@ -63,7 +80,8 @@ const CUSTOMER_DATA = [
       { dialogue: "아무도 모르게 다가가서 놀래켜 줄 거야. 발소리를 없애줘!", potionName: "그림자 걸음 물약" },
       { dialogue: "친구한테 냄새나는 장난을 칠 거야! 지독한 냄새가 나는 약 있어?", potionName: "맹독성 가스 물약" },
       { dialogue: "반짝반짝 빛나는 요정이 되고 싶어! 빛가루가 떨어지는 약을 줘!", potionName: "눈부신 오로라 물약" },
-      { dialogue: "인간들의 물건을 번쩍 들어올릴 만큼 힘이 세지는 약을 줘!", potionName: "거인의 힘 물약" }
+      { dialogue: "아예 내 몸을 투명하게 만들어서 숨바꼭질에서 1등 할래!", potionName: "투명화 영약" },
+      { dialogue: "나쁜 고블린들이 우리 숲을 떠나게 하고 싶어. 기억을 지우는 약을 줘!", potionName: "기억 소거 물약" }
     ]
   },
   {
@@ -72,17 +90,20 @@ const CUSTOMER_DATA = [
       { dialogue: "전투 중에 상처를 입었소! 재생력이 필요한 상태요.", potionName: "신속의 치유 물약" },
       { dialogue: "적진에 몰래 잠입해야 하오. 기척을 완전히 지우는 약을 주시오.", potionName: "그림자 걸음 물약" },
       { dialogue: "야간 정찰 임무를 맡았소. 어둠 속에서도 적을 볼 수 있게 해주시오.", potionName: "올빼미의 시야 물약" },
-      { dialogue: "거대한 몬스터를 상대해야 하오. 바위도 부술 수 있는 괴력을 주시오.", potionName: "거인의 힘 물약" }
+      { dialogue: "거대한 몬스터를 상대해야 하오. 바위도 부술 수 있는 괴력을 주시오.", potionName: "거인의 힘 물약" },
+      { dialogue: "포로를 심문해야 하오. 그가 절대 거짓을 말할 수 없게 하는 약을 주시오.", potionName: "거짓말 탐지 영약" },
+      { dialogue: "깊은 호수 밑바닥에 성물이 가라앉아 있소. 물속에서 숨 쉴 수 있는 약이 필요하오.", potionName: "물갈퀴 변이 물약" }
     ]
   },
   {
     type: 'wizard', emoji: '🧙‍♂️', name: '괴짜 마법사',
     quests: [
       { dialogue: "내 마나가 바닥났어! 마나를 폭발적으로 채워줄 영약이 필요한데, 할 수 있겠나?", potionName: "마력 폭주 영약" },
-      { dialogue: "새로운 마법을 연구하다가 폭발이 일어났네. 화상을 치료할 약을 주게.", potionName: "신속의 치유 물약" },
       { dialogue: "연구를 너무 오래 했더니 눈이 침침하군. 시야가 맑아지는 약이 필요해.", potionName: "올빼미의 시야 물약" },
       { dialogue: "과거로 돌아가서 내 실수를 바로잡고 싶네. 시간의 흐름을 비트는 약을 주게!", potionName: "시간 역행의 영약" },
-      { dialogue: "마법 실험에 쓸 아주 강력하고 위험한 독이 필요하네.", potionName: "맹독성 가스 물약" }
+      { dialogue: "마법 실험에 쓸 아주 강력하고 위험한 독이 필요하네.", potionName: "맹독성 가스 물약" },
+      { dialogue: "내가 어제 마법서를 어디에 뒀는지 잊어버렸네... 기억이 돌아오는 약은 없나? 아니, 차라리 아예 잊게 해주게!", potionName: "기억 소거 물약" },
+      { dialogue: "제자의 배신이 의심되네. 그 녀석의 입에서 진실만 나오게 할 약을 줘.", potionName: "거짓말 탐지 영약" }
     ]
   },
   {
@@ -92,7 +113,8 @@ const CUSTOMER_DATA = [
       { dialogue: "젊고 예쁜 시절로 돌아가고 싶어. 주름이 쫙 펴지는 빛나는 약을 다오.", potionName: "눈부신 오로라 물약" },
       { dialogue: "하늘을 빗자루 없이 날아다니고 싶어! 깃털처럼 가벼워지는 약을 줘!", potionName: "광속의 깃털 물약" },
       { dialogue: "어둠 속에서 길 잃은 아이들을 찾아야 해. 밤눈이 밝아지는 약이 필요해.", potionName: "올빼미의 시야 물약" },
-      { dialogue: "마법을 너무 많이 써서 기력이 쇠했어. 마력을 꽉 채워주는 약을 다오.", potionName: "마력 폭주 영약" }
+      { dialogue: "강력한 드래곤의 마법을 흉내 내고 싶어! 입에서 불길이 뿜어지는 약을 줘!", potionName: "용의 숨결 물약" },
+      { dialogue: "미운 사냥꾼 놈에게 먹일 거야. 자기가 누군지 영영 잊어버리게 만들 약을 줘.", potionName: "기억 소거 물약" }
     ]
   },
   {
@@ -101,8 +123,9 @@ const CUSTOMER_DATA = [
       { dialogue: "발소리를 없애주는 약... 질문은 받지 않겠어. 돈은 두둑이 주지.", potionName: "그림자 걸음 물약" },
       { dialogue: "경비병의 눈을 피해야 해. 순식간에 도망칠 수 있는 약을 줘.", potionName: "광속의 깃털 물약" },
       { dialogue: "금고 문이 너무 무거워. 혼자서도 번쩍 들 수 있는 힘이 필요해.", potionName: "거인의 힘 물약" },
-      { dialogue: "달빛도 없는 밤에 임무를 수행해야 해. 어둠 속성 시야 물약 있나?", potionName: "올빼미의 시야 물약" },
-      { dialogue: "경비견을 조용히 잠재울 약이 필요해. 냄새 없는 수면제로.", potionName: "깊은 밤의 숙면 물약" }
+      { dialogue: "경비견을 조용히 잠재울 약이 필요해. 냄새 없는 수면제로.", potionName: "깊은 밤의 숙면 물약" },
+      { dialogue: "조직 내에 배신자가 있는 것 같아. 진실을 토해내게 할 물약이 필요해.", potionName: "거짓말 탐지 영약" },
+      { dialogue: "아예 내 몸을 투명하게 만들어서 왕궁 보물고를 털 생각이야. 약을 내놔.", potionName: "투명화 영약" }
     ]
   },
   {
@@ -111,8 +134,9 @@ const CUSTOMER_DATA = [
       { dialogue: "내일 파티가 있어요. 피부에서 빛이 나는 최고급 미용 약으로 준비하세요.", potionName: "눈부신 오로라 물약" },
       { dialogue: "최근 암살 위협에 시달려 잠을 못 자요. 아주 깊게 잠드는 약을 주세요.", potionName: "깊은 밤의 숙면 물약" },
       { dialogue: "무도회에서 누구보다 가볍고 우아하게 춤추고 싶어요.", potionName: "광속의 깃털 물약" },
-      { dialogue: "연회에서 독을 마신 것 같아요! 당장 해독과 치유를 해주는 약을!!", potionName: "신속의 치유 물약" },
-      { dialogue: "목소리가 너무 쉬었어요. 연설을 위해 성대를 맑게 해주는 약을 주시오.", potionName: "천상의 목소리 영약" }
+      { dialogue: "목소리가 너무 쉬었어요. 연설을 위해 성대를 맑게 해주는 약을 주시오.", potionName: "천상의 목소리 영약" },
+      { dialogue: "사교계 파티에서 정략결혼 상대의 환심을 사야 해요. 사랑에 빠지는 약을 주세요.", potionName: "사랑의 묘약" },
+      { dialogue: "너무 수치스러운 실수를 저질렀어요! 어제 연회에 있던 모든 이들의 기억을 지워주세요!", potionName: "기억 소거 물약" }
     ]
   },
   {
@@ -121,7 +145,48 @@ const CUSTOMER_DATA = [
       { dialogue: "햇빛을 견딜 수 있는 약이 필요하다... 피보다 비싼 값을 치르지.", potionName: "태양 극복의 영약" },
       { dialogue: "오랜 세월을 살다 보니 몸이 둔해졌어. 폭발적인 힘을 낼 약을 다오.", potionName: "거인의 힘 물약" },
       { dialogue: "사냥꾼들의 은 화살에 맞았다... 재생력을 극한으로 끌어올려 다오.", potionName: "신속의 치유 물약" },
-      { dialogue: "수백 년 전의 기억이 흐릿해. 과거를 엿볼 수 있는 약을 만들어다오.", potionName: "시간 역행의 영약" }
+      { dialogue: "수백 년 전의 기억이 흐릿해. 과거를 엿볼 수 있는 약을 만들어다오.", potionName: "시간 역행의 영약" },
+      { dialogue: "거울에 비치지 않는 특성을 이용해 투명하게 변하고 싶군. 완벽한 암살을 위해.", potionName: "투명화 영약" }
+    ]
+  },
+  {
+    type: 'merchant', emoji: '🤑', name: '수상한 상인',
+    quests: [
+      { dialogue: "손님들이 내 물건의 흠집을 눈치채지 못하게 기억을 깜빡하게 만들 약이 필요해!", potionName: "기억 소거 물약" },
+      { dialogue: "도적 떼를 만나면 마차를 버리고 빛의 속도로 도망쳐야 하네. 제일 빠른 약을 주게.", potionName: "광속의 깃털 물약" },
+      { dialogue: "거래처 놈이 사기를 치는 것 같아! 그놈이 거짓말을 못 하게 만드는 약을 줘.", potionName: "거짓말 탐지 영약" },
+      { dialogue: "요즘 투자하는 족족 망하고 있네... 대박을 터뜨려줄 엄청난 행운의 약을 주게!", potionName: "행운의 네잎클로버 물약" },
+      { dialogue: "사막 한가운데서도 지치지 않고 짐을 옮길 수 있는 엄청난 체력이 필요해.", potionName: "거인의 힘 물약" }
+    ]
+  },
+  {
+    type: 'explorer', emoji: '🤠', name: '열혈 탐험가',
+    quests: [
+      { dialogue: "내일은 수중 동굴을 탐험할 예정이오. 물속을 자유롭게 헤엄칠 수 있는 약을 주시오!", potionName: "물갈퀴 변이 물약" },
+      { dialogue: "햇빛 한 점 없는 깊은 심연으로 내려가야 하오. 완벽한 야간 시야가 필요하오.", potionName: "올빼미의 시야 물약" },
+      { dialogue: "오지에선 무슨 병에 걸릴지 모르지. 어떤 치명적인 병도 낫게 해줄 비약이 필요하오.", potionName: "만병통치약" },
+      { dialogue: "유적의 거대한 돌문이 닫혀버렸소. 그걸 부수고 나올 괴력을 주시오!", potionName: "거인의 힘 물약" },
+      { dialogue: "독거미 떼에게 물렸소! 당장 해독하고 상처를 낫게 할 약을 주시오!", potionName: "신속의 치유 물약" }
+    ]
+  },
+  {
+    type: 'ghost', emoji: '👻', name: '원한 맺힌 유령',
+    quests: [
+      { dialogue: "내 복수를 완성하기 위해 물리적인 힘이 필요해... 물건을 집어 던질 괴력을 줘...", potionName: "거인의 힘 물약" },
+      { dialogue: "너무 오랫동안 이승을 떠돌아서 내가 왜 죽었는지도 잊어버렸어. 과거를 보여주는 약을...", potionName: "시간 역행의 영약" },
+      { dialogue: "나를 괴롭히는 이승의 미련을 모두 잊고 편안하게 승천하고 싶어. 기억을 지워줘.", potionName: "기억 소거 물약" },
+      { dialogue: "그 사람이 내 목소리를 듣지 못해... 영혼의 목소리를 실체화할 영약을 줘...", potionName: "천상의 목소리 영약" },
+      { dialogue: "내 흐릿한 영혼이 살아생전처럼 아름답게 빛나게 해줘. 마지막으로 그 앞에 서게...", potionName: "눈부신 오로라 물약" }
+    ]
+  },
+  {
+    type: 'mermaid', emoji: '🧜‍♀️', name: '호기심 많은 인어',
+    quests: [
+      { dialogue: "육지의 왕자님을 만났어! 그를 향한 내 마음을 전할 사랑의 묘약이 필요해.", potionName: "사랑의 묘약" },
+      { dialogue: "내 꼬리로는 모래사장을 걷기 힘들어... 깃털처럼 가볍게 날아오르듯 걷게 해줘!", potionName: "광속의 깃털 물약" },
+      { dialogue: "마녀에게 목소리를 빼앗겼어. 이 저주를 풀고 다시 아름답게 노래할 수 있게 해줘.", potionName: "천상의 목소리 영약" },
+      { dialogue: "육지의 태양은 너무 뜨거워. 화상을 입지 않고 견딜 수 있는 시원한 약을 줘.", potionName: "태양 극복의 영약" },
+      { dialogue: "인간들의 마을을 몰래 구경하고 싶어. 아무도 날 보지 못하게 투명하게 만들어줘!", potionName: "투명화 영약" }
     ]
   }
 ];
@@ -240,18 +305,14 @@ export default function PotionShopSim() {
         name: villagerQuest.name,
         dialogue: villagerQuest.dialogue,
         potionName: villagerQuest.potionName,
-        slots: 3,
-        maxAttempts: 8,
-        baseReward: 35
+        slots: POTION_DB[villagerQuest.potionName].slots,
+        maxAttempts: POTION_DB[villagerQuest.potionName].maxAttempts,
+        baseReward: POTION_DB[villagerQuest.potionName].baseReward
       });
     } else {
-      // 2일차부터
-      let maxSlotsAllowed = 3;
-      if (currentDay >= 3) maxSlotsAllowed = 4;
-      if (currentDay >= 5) maxSlotsAllowed = 5;
-
+      // 명성치에 기반한 퀘스트 풀 생성
+      let availableQuests = ALL_QUESTS.filter(q => POTION_DB[q.potionName].reqRep <= reputation).sort(() => Math.random() - 0.5);
       const customersCount = 2 + Math.floor(currentDay / 3);
-      let availableQuests = ALL_QUESTS.filter(q => POTION_DB[q.potionName].slots <= maxSlotsAllowed).sort(() => Math.random() - 0.5);
       
       const usedTypes = new Set([lastDayFinalCustomerType]);
       const usedPotions = new Set();
@@ -574,6 +635,7 @@ export default function PotionShopSim() {
           <p className="text-slate-400 leading-relaxed bg-slate-800 p-3 sm:p-4 rounded-lg border border-slate-700 text-xs sm:text-sm mb-6">
             손님들의 증상을 듣고 알맞은 마법약을 처방한 뒤,<br/>
             <span className="text-purple-300 font-bold">고정된 마법약 레시피</span>를 추리하여 완벽하게 조제하세요!<br/><br/>
+            <span className="text-yellow-400 font-bold">조제에 성공하여 명성이 오르면 새로운 물약이 해금됩니다.</span><br/>
             오진하거나 조제에 실패하면 명성이 깎이며 파산할 수 있습니다.
           </p>
           
@@ -800,21 +862,27 @@ export default function PotionShopSim() {
                   <div className="p-2 sm:p-4 overflow-y-auto custom-scrollbar flex-1">
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 sm:gap-2 pb-2">
                       {POTION_CATALOG.map((potionName, idx) => {
+                        const potionInfo = POTION_DB[potionName];
+                        const isLocked = potionInfo.reqRep > reputation;
                         const isTutorialTarget = tutorial.isActive && potionName === '깊은 밤의 숙면 물약';
-                        const isTutorialDisabled = tutorial.isActive && potionName !== '깊은 밤의 숙면 물약';
+                        const isTutorialDisabled = tutorial.isActive && !isTutorialTarget;
+
                         return (
                           <button
                             key={idx}
                             onClick={() => handleDiagnose(potionName)}
-                            disabled={diagnosisFeedback !== null || isTutorialDisabled}
-                            className={`p-2 sm:p-3 text-left rounded-lg sm:rounded-xl text-[11px] sm:text-sm font-semibold transition-colors flex items-center gap-2 border ${
+                            disabled={diagnosisFeedback !== null || isTutorialDisabled || isLocked}
+                            className={`p-2 sm:p-3 text-left rounded-lg sm:rounded-xl text-[11px] sm:text-sm font-semibold transition-colors flex items-center justify-between gap-2 border ${
                               isTutorialTarget ? 'bg-indigo-600 text-white border-indigo-400 animate-pulse ring-2 ring-indigo-500' : 
-                              isTutorialDisabled ? 'bg-slate-800 text-slate-600 border-slate-700 cursor-not-allowed' :
+                              (isTutorialDisabled || isLocked) ? 'bg-slate-800 text-slate-500 border-slate-700 cursor-not-allowed' :
                               'bg-slate-700 hover:bg-indigo-600 text-slate-200 hover:text-white border-slate-600 hover:border-indigo-400'
                             }`}
                           >
-                            <FlaskConical className="w-3 h-3 sm:w-4 sm:h-4 opacity-70 shrink-0" />
-                            <span className="truncate">{potionName}</span>
+                            <div className="flex items-center gap-2 overflow-hidden">
+                              {isLocked ? <Lock className="w-3 h-3 sm:w-4 sm:h-4 opacity-50 shrink-0"/> : <FlaskConical className="w-3 h-3 sm:w-4 sm:h-4 opacity-70 shrink-0" />}
+                              <span className="truncate">{potionName}</span>
+                            </div>
+                            {isLocked && <span className="text-[9px] sm:text-[10px] text-red-400 font-bold shrink-0 bg-red-900/30 px-1.5 py-0.5 rounded">명성 {potionInfo.reqRep}</span>}
                           </button>
                         );
                       })}
