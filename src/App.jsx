@@ -3,9 +3,10 @@ import {
   RotateCcw, FlaskConical, Sparkles, AlertCircle, Flame, 
   Store, Coins, Star, Users, ArrowRight, BookOpen,
   Search, Eye, ShoppingBag, X, PackageOpen, Target,
-  ScrollText, CheckCircle2, XCircle, Info
+  ScrollText, CheckCircle2, XCircle, Info, Save
 } from 'lucide-react';
 
+// --- 데이터 정의 (재료 10종) ---
 const INGREDIENTS = [
   { id: '1', emoji: '🔴', name: '붉은 이슬', color: 'bg-red-100 border-red-300 text-red-700' },
   { id: '2', emoji: '🔵', name: '푸른 깃털', color: 'bg-blue-100 border-blue-300 text-blue-700' },
@@ -131,14 +132,18 @@ const CUSTOMER_DATA = [
 ];
 
 const ITEM_COSTS = { hintIngredient: 5, hintSlot: 15 };
+const SAVE_KEY = 'potionShopSave';
 
-export default function App() {
+export default function PotionShopSim() {
   const [appState, setAppState] = useState('start');
+  const [hasSaveData, setHasSaveData] = useState(false);
+  const [saveIndicator, setSaveIndicator] = useState(false);
+
   const [day, setDay] = useState(1);
   const [money, setMoney] = useState(0);
   const [reputation, setReputation] = useState(50);
-  
   const [inventory, setInventory] = useState({ hintIngredient: 0, hintSlot: 0 });
+  
   const [showShopModal, setShowShopModal] = useState(false);
   const [activeItemMode, setActiveItemMode] = useState(null);
   const [knownIngredients, setKnownIngredients] = useState({});
@@ -158,7 +163,46 @@ export default function App() {
   const [minigameResult, setMinigameResult] = useState(null);
   const [selectedSlotIndex, setSelectedSlotIndex] = useState(null);
 
+  // 컴포넌트 마운트 시 세이브 데이터 확인
+  useEffect(() => {
+    const saved = localStorage.getItem(SAVE_KEY);
+    if (saved) setHasSaveData(true);
+  }, []);
+
+  // 상태가 바뀔 때마다 자동 저장 (상점 화면, 하루 종료 화면일 때만)
+  useEffect(() => {
+    if (appState === 'shop' || appState === 'day_end') {
+      const saveData = {
+        day, money, reputation, inventory, dailyCustomers, currentCustomerIndex
+      };
+      localStorage.setItem(SAVE_KEY, JSON.stringify(saveData));
+      setHasSaveData(true);
+      
+      // 저장 알림 UI 트리거
+      setSaveIndicator(true);
+      const timer = setTimeout(() => setSaveIndicator(false), 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [appState, day, money, reputation, inventory, dailyCustomers, currentCustomerIndex]);
+
+  const loadGame = () => {
+    const saved = localStorage.getItem(SAVE_KEY);
+    if (saved) {
+      const data = JSON.parse(saved);
+      setDay(data.day);
+      setMoney(data.money);
+      setReputation(data.reputation);
+      setInventory(data.inventory);
+      setDailyCustomers(data.dailyCustomers || []);
+      setCurrentCustomerIndex(data.currentCustomerIndex || 0);
+      setAppState('shop');
+    }
+  };
+
   const startGame = () => {
+    if (hasSaveData && !window.confirm('기존 저장 데이터가 지워집니다. 정말 새로 시작하시겠습니까?')) {
+      return;
+    }
     setDay(1);
     setMoney(50);
     setReputation(50);
@@ -256,6 +300,8 @@ export default function App() {
       setTimeout(() => {
         if (reputation - penalty <= 0) {
           setAppState('game_over');
+          localStorage.removeItem(SAVE_KEY);
+          setHasSaveData(false);
         } else {
           moveToNextCustomer();
         }
@@ -401,6 +447,8 @@ export default function App() {
 
     if (newReputation <= 0) {
       setAppState('game_over');
+      localStorage.removeItem(SAVE_KEY);
+      setHasSaveData(false);
     } else {
       moveToNextCustomer();
     }
@@ -410,9 +458,15 @@ export default function App() {
 
   const renderTopBar = () => (
     <div className="flex items-center justify-between bg-slate-800 p-3 sm:p-4 rounded-xl border border-slate-700 shadow-md mb-4 sm:mb-6 relative z-20">
-      <div className="flex items-center gap-2 text-purple-300 font-bold text-lg sm:text-xl">
+      <div className="flex items-center gap-2 text-purple-300 font-bold text-lg sm:text-xl relative">
         <Store className="w-5 h-5 sm:w-6 sm:h-6" />
         <span>Day {day}</span>
+        {/* 자동 저장 알림 UI */}
+        {saveIndicator && (
+          <div className="absolute -top-3 left-0 bg-green-900/80 text-green-300 text-[10px] px-2 py-0.5 rounded-full flex items-center gap-1 animate-pulse border border-green-500 whitespace-nowrap">
+            <Save className="w-3 h-3"/> 자동 저장됨
+          </div>
+        )}
       </div>
       <div className="flex gap-3 sm:gap-6 text-sm sm:text-base">
         <div className="flex items-center gap-1 sm:gap-2 text-yellow-400 font-bold">
@@ -429,7 +483,7 @@ export default function App() {
 
   if (appState === 'start') {
     return (
-      <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center p-4">
+      <div className="min-h-[100dvh] bg-slate-900 flex flex-col items-center justify-center p-4">
         <div className="text-center space-y-4 sm:space-y-6 max-w-md w-full">
           <div className="flex justify-center mb-4 sm:mb-8">
             <div className="relative">
@@ -440,17 +494,28 @@ export default function App() {
           <h1 className="text-3xl sm:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-500 drop-shadow-lg">
             위대한 마법약 상점
           </h1>
-          <p className="text-slate-400 leading-relaxed bg-slate-800 p-3 sm:p-4 rounded-lg border border-slate-700 text-xs sm:text-sm">
+          <p className="text-slate-400 leading-relaxed bg-slate-800 p-3 sm:p-4 rounded-lg border border-slate-700 text-xs sm:text-sm mb-6">
             손님들의 다양한 증상을 듣고 올바른 마법약을 처방하세요!<br/>
             <span className="text-purple-300 font-bold">(※ 동일한 물약이라도 체질에 따라 레시피가 다릅니다)</span><br/><br/>
             오진하거나 조제에 실패하면 명성이 깎이며,<br/>명성이 0이 되면 파산합니다.
           </p>
-          <button 
-            onClick={startGame}
-            className="w-full py-3 sm:py-4 bg-purple-600 hover:bg-purple-500 text-white text-lg sm:text-xl font-bold rounded-xl shadow-[0_0_20px_rgba(168,85,247,0.4)] transition-all transform hover:scale-105"
-          >
-            상점 문 열기
-          </button>
+          
+          <div className="space-y-3">
+            {hasSaveData && (
+              <button 
+                onClick={loadGame}
+                className="w-full py-3 sm:py-4 bg-indigo-600 hover:bg-indigo-500 text-white text-lg sm:text-xl font-bold rounded-xl shadow-[0_0_20px_rgba(79,70,229,0.4)] transition-all transform hover:scale-105 flex items-center justify-center gap-2"
+              >
+                <Save className="w-5 h-5"/> 이어서 하기
+              </button>
+            )}
+            <button 
+              onClick={startGame}
+              className={`w-full py-3 sm:py-4 text-lg sm:text-xl font-bold rounded-xl transition-all transform hover:scale-105 ${hasSaveData ? 'bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-600' : 'bg-purple-600 hover:bg-purple-500 text-white shadow-[0_0_20px_rgba(168,85,247,0.4)]'}`}
+            >
+              새로 시작하기
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -458,7 +523,7 @@ export default function App() {
 
   if (appState === 'game_over') {
     return (
-      <div className="min-h-screen bg-red-950 flex flex-col items-center justify-center p-4 text-center">
+      <div className="min-h-[100dvh] bg-red-950 flex flex-col items-center justify-center p-4 text-center">
         <AlertCircle className="w-20 h-20 sm:w-24 sm:h-24 text-red-500 mb-4 sm:mb-6 animate-bounce" />
         <h1 className="text-3xl sm:text-4xl font-black text-red-400 mb-2 sm:mb-4">파산했습니다!</h1>
         <p className="text-red-200 mb-6 sm:mb-8 text-sm sm:text-lg">명성이 바닥에 떨어져 상점을 닫습니다...</p>
@@ -476,7 +541,7 @@ export default function App() {
 
   if (appState === 'day_end') {
     return (
-      <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center p-4">
+      <div className="min-h-[100dvh] bg-slate-900 flex flex-col items-center justify-center p-4">
         <div className="bg-slate-800 p-6 sm:p-8 rounded-2xl border-2 border-purple-500 max-w-sm w-full text-center shadow-[0_0_30px_rgba(168,85,247,0.2)]">
           <Star className="w-12 h-12 sm:w-16 sm:h-16 text-yellow-400 mx-auto mb-3 sm:mb-4" />
           <h2 className="text-2xl sm:text-3xl font-bold text-white mb-1 sm:mb-2">영업 종료</h2>
@@ -661,7 +726,7 @@ export default function App() {
                         disabled={diagnosisFeedback !== null}
                         className="p-2 sm:p-3 bg-slate-700 hover:bg-indigo-600 text-left rounded-lg sm:rounded-xl text-[11px] sm:text-sm font-semibold text-slate-200 hover:text-white border border-slate-600 hover:border-indigo-400 transition-colors flex items-center gap-2"
                       >
-                        <FlaskConical className="w-4 h-4 opacity-70 shrink-0" />
+                        <FlaskConical className="w-3 h-3 sm:w-4 sm:h-4 opacity-70 shrink-0" />
                         <span className="truncate">{potionName}</span>
                       </button>
                     ))}
@@ -739,7 +804,13 @@ export default function App() {
             <div className="bg-slate-800 p-2 sm:p-3 rounded-xl border border-slate-700 flex flex-wrap gap-2 sm:gap-4 items-center shrink-0">
               <span className="hidden sm:flex text-sm text-slate-400 font-bold items-center gap-1"><PackageOpen className="w-4 h-4"/> 도구함</span>
               
-              <div className="flex gap-2 w-full sm:w-auto">
+              {activeItemMode && (
+                <span className="w-full sm:w-auto text-center sm:text-left text-[10px] sm:text-xs text-blue-300 animate-pulse font-bold bg-blue-900/40 px-2 py-1 rounded mr-auto">
+                  {activeItemMode === 'hintIngredient' ? '감별할 재료 클릭!' : '투시할 칸 클릭!'}
+                </span>
+              )}
+
+              <div className="flex gap-1.5 sm:gap-2 w-full sm:w-auto ml-auto">
                 <button 
                   onClick={() => setActiveItemMode(activeItemMode === 'hintIngredient' ? null : 'hintIngredient')}
                   disabled={inventory.hintIngredient <= 0 || brewPhase !== 'idle'}
@@ -763,20 +834,14 @@ export default function App() {
                 >
                   <Eye className="w-3 h-3 sm:w-4 sm:h-4" /> 구슬 ({inventory.hintSlot})
                 </button>
+
+                <button 
+                  onClick={() => setShowShopModal(true)}
+                  className="flex-1 sm:flex-none flex items-center justify-center gap-1 px-2 py-1.5 sm:px-3 sm:py-2 bg-blue-900/80 hover:bg-blue-800 text-blue-200 border border-blue-500 rounded-lg text-xs sm:text-sm font-bold shadow-lg transition-colors whitespace-nowrap"
+                >
+                  <ShoppingBag className="w-3 h-3 sm:w-4 sm:h-4" /> 상점
+                </button>
               </div>
-
-              {activeItemMode && (
-                <span className="w-full sm:w-auto text-center sm:text-left text-[10px] sm:text-xs text-blue-300 animate-pulse font-bold bg-blue-900/40 px-2 py-1 rounded">
-                  {activeItemMode === 'hintIngredient' ? '감별할 재료 클릭!' : '투시할 칸 클릭!'}
-                </span>
-              )}
-
-              <button 
-                onClick={() => setShowShopModal(true)}
-                className="hidden sm:flex ml-auto items-center gap-1 px-3 py-2 bg-blue-900/80 hover:bg-blue-800 text-blue-200 border border-blue-500 rounded-lg text-sm font-bold shadow-lg transition-colors"
-              >
-                <ShoppingBag className="w-4 h-4" /> 상점
-              </button>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-2 sm:gap-6 shrink-0">
@@ -784,12 +849,6 @@ export default function App() {
               <div className={`bg-slate-800 p-3 sm:p-4 rounded-xl border transition-all ${activeItemMode === 'hintIngredient' ? 'animate-pulse-glow' : 'border-slate-700'}`}>
                 <div className="flex justify-between items-center mb-2 sm:mb-4">
                   <h3 className="text-sm sm:text-lg font-semibold text-slate-200">재료 선반</h3>
-                  <button 
-                    onClick={() => setShowShopModal(true)}
-                    className="sm:hidden flex items-center gap-1 px-2 py-1 bg-blue-900/80 hover:bg-blue-800 text-blue-200 border border-blue-500 rounded text-[10px] font-bold transition-colors"
-                  >
-                    <ShoppingBag className="w-3 h-3" /> 상점
-                  </button>
                 </div>
                 <div className="grid grid-cols-5 md:grid-cols-5 gap-1 sm:gap-2">
                   {INGREDIENTS.map(item => {
@@ -856,7 +915,7 @@ export default function App() {
                         className={`
                           relative w-10 h-10 sm:w-14 sm:h-14 md:w-16 md:h-16 shrink-0 rounded-full border-2 flex items-center justify-center text-lg sm:text-3xl transition-all duration-300
                           ${item ? 'bg-slate-800 border-purple-400 shadow-[inset_0_0_10px_rgba(168,85,247,0.4)]' : 'bg-slate-900 border-slate-700 border-dashed'}
-                          ${isItemTarget ? 'cursor-crosshair hover:border-purple-400 hover:shadow-[0_0_15px_rgba(168,85,247,0.5)]' : (item && !activeItemMode ? 'cursor-pointer' : '')}
+                          ${isItemTarget ? 'cursor-crosshair hover:border-purple-400 hover:shadow-[0_0_10px_rgba(168,85,247,0.5)]' : (item && !activeItemMode ? 'cursor-pointer' : '')}
                           ${isSelectedEmptySlot ? 'border-blue-400 shadow-[0_0_10px_rgba(96,165,250,0.6)] animate-pulse cursor-pointer' : (!item && !activeItemMode ? 'cursor-pointer hover:border-slate-500' : '')}
                           ${brewPhase === 'heating' ? 'animate-bounce shadow-[inset_0_0_15px_rgba(249,115,22,0.8)] border-orange-400' : ''}
                         `}
@@ -891,8 +950,8 @@ export default function App() {
               </div>
             </div>
 
-            <div className="bg-slate-800 rounded-xl border border-slate-700 shadow-inner flex flex-col flex-1 min-h-[150px]">
-              <div className="bg-slate-800/80 border-b border-slate-700 p-2 rounded-t-xl text-[10px] sm:text-xs text-slate-300 flex items-center gap-3 justify-center z-10">
+            <div className="bg-slate-800 rounded-xl border border-slate-700 shadow-inner flex flex-col h-48 sm:h-64 shrink-0 overflow-hidden">
+              <div className="bg-slate-800/80 border-b border-slate-700 p-2 rounded-t-xl text-[10px] sm:text-xs text-slate-300 flex items-center gap-3 justify-center z-10 shrink-0">
                 <Info className="w-3 h-3 text-slate-400 shrink-0"/>
                 <span className="flex items-center gap-1">
                   <Sparkles className="w-3 h-3 text-green-400"/> 
@@ -906,9 +965,9 @@ export default function App() {
               </div>
 
               {history.length > 0 ? (
-                <div className="p-3 sm:p-5 space-y-2 sm:space-y-3 overflow-y-auto custom-scrollbar flex-1 max-h-[30vh]">
+                <div className="p-3 sm:p-5 space-y-2 sm:space-y-3 overflow-y-auto custom-scrollbar flex-1 min-h-0">
                   {history.map((record, idx) => (
-                    <div key={idx} className={`flex items-center justify-between p-2 sm:p-3 rounded-lg border transition-all ${idx === 0 ? 'bg-slate-700 border-purple-500' : 'bg-slate-900 border-slate-700 opacity-80'}`}>
+                    <div key={idx} className={`flex items-center justify-between p-2 sm:p-3 rounded-lg border transition-all shrink-0 ${idx === 0 ? 'bg-slate-700 border-purple-500' : 'bg-slate-900 border-slate-700 opacity-80'}`}>
                       <div className="flex items-center gap-2 sm:gap-4">
                         <span className="text-slate-400 w-3 sm:w-4 text-[10px] sm:text-sm font-mono">{record.attempt}.</span>
                         <div className="flex flex-wrap gap-0.5 sm:gap-2">
