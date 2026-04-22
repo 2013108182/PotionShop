@@ -596,23 +596,23 @@ export default function PotionShopSim() {
   };
 
   const renderTopBar = () => (
-    <div className="flex items-center justify-between bg-slate-800 p-3 sm:p-4 rounded-xl border border-slate-700 shadow-md mb-4 sm:mb-6 relative z-20 shrink-0">
-      <div className="flex items-center gap-2 text-purple-300 font-bold text-lg sm:text-xl relative">
-        <Store className="w-5 h-5 sm:w-6 sm:h-6" />
+    <div className="flex items-center justify-between bg-slate-800 p-4 sm:p-5 rounded-2xl border border-slate-700 shadow-md mb-4 sm:mb-6 relative z-20 shrink-0">
+      <div className="flex items-center gap-2 text-purple-300 font-bold text-xl sm:text-2xl relative">
+        <Store className="w-6 h-6 sm:w-7 sm:h-7" />
         <span>Day {day}</span>
         {saveIndicator && (
-          <div className="absolute -top-3 left-0 bg-green-900/80 text-green-300 text-[10px] px-2 py-0.5 rounded-full flex items-center gap-1 animate-pulse border border-green-500 whitespace-nowrap">
+          <div className="absolute -top-3 left-0 bg-green-900/80 text-green-300 text-xs px-2 py-0.5 rounded-full flex items-center gap-1 animate-pulse border border-green-500 whitespace-nowrap">
             <Save className="w-3 h-3"/> 자동 저장됨
           </div>
         )}
       </div>
-      <div className="flex gap-3 sm:gap-6 text-sm sm:text-base">
-        <div className="flex items-center gap-1 sm:gap-2 text-yellow-400 font-bold">
-          <Coins className="w-4 h-4 sm:w-5 sm:h-5" />
+      <div className="flex gap-4 sm:gap-6 text-base sm:text-lg">
+        <div className="flex items-center gap-1.5 sm:gap-2 text-yellow-400 font-bold">
+          <Coins className="w-5 h-5 sm:w-6 sm:h-6" />
           <span>{money} G</span>
         </div>
-        <div className={`flex items-center gap-1 sm:gap-2 font-bold ${reputation > 30 ? 'text-blue-400' : 'text-red-400 animate-pulse'}`}>
-          <Star className="w-4 h-4 sm:w-5 sm:h-5" />
+        <div className={`flex items-center gap-1.5 sm:gap-2 font-bold ${reputation > 30 ? 'text-blue-400' : 'text-red-400 animate-pulse'}`}>
+          <Star className="w-5 h-5 sm:w-6 sm:h-6" />
           <span>명성 {reputation}</span>
         </div>
       </div>
@@ -622,35 +622,35 @@ export default function PotionShopSim() {
   if (appState === 'start') {
     return (
       <div className="min-h-[100dvh] bg-slate-900 flex flex-col items-center justify-center p-4">
-        <div className="text-center space-y-4 sm:space-y-6 max-w-md w-full">
-          <div className="flex justify-center mb-4 sm:mb-8">
+        <div className="text-center space-y-6 sm:space-y-8 max-w-lg w-full">
+          <div className="flex justify-center mb-6 sm:mb-10">
             <div className="relative">
-              <FlaskConical className="w-24 h-24 sm:w-32 sm:h-32 text-purple-500 animate-pulse" />
-              <Sparkles className="w-8 h-8 sm:w-12 sm:h-12 text-yellow-400 absolute -top-2 -right-2 sm:-top-4 sm:-right-4 animate-bounce" />
+              <FlaskConical className="w-28 h-28 sm:w-40 sm:h-40 text-purple-500 animate-pulse" />
+              <Sparkles className="w-10 h-10 sm:w-14 sm:h-14 text-yellow-400 absolute -top-2 -right-2 sm:-top-4 sm:-right-4 animate-bounce" />
             </div>
           </div>
-          <h1 className="text-3xl sm:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-500 drop-shadow-lg">
+          <h1 className="text-4xl sm:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-500 drop-shadow-lg leading-tight">
             위대한 마법약 상점
           </h1>
-          <p className="text-slate-400 leading-relaxed bg-slate-800 p-3 sm:p-4 rounded-lg border border-slate-700 text-xs sm:text-sm mb-6">
+          <p className="text-slate-400 leading-relaxed bg-slate-800 p-4 sm:p-6 rounded-xl border border-slate-700 text-sm sm:text-base mb-8">
             손님들의 증상을 듣고 알맞은 마법약을 처방한 뒤,<br/>
             <span className="text-purple-300 font-bold">고정된 마법약 레시피</span>를 추리하여 완벽하게 조제하세요!<br/><br/>
             <span className="text-yellow-400 font-bold">조제에 성공하여 명성이 오르면 새로운 물약이 해금됩니다.</span><br/>
             오진하거나 조제에 실패하면 명성이 깎이며 파산할 수 있습니다.
           </p>
           
-          <div className="space-y-3">
+          <div className="space-y-4">
             {hasSaveData && (
               <button 
                 onClick={loadGame}
-                className="w-full py-3 sm:py-4 bg-indigo-600 hover:bg-indigo-500 text-white text-lg sm:text-xl font-bold rounded-xl shadow-[0_0_20px_rgba(79,70,229,0.4)] transition-all transform hover:scale-105 flex items-center justify-center gap-2"
+                className="w-full py-4 sm:py-5 bg-indigo-600 hover:bg-indigo-500 text-white text-xl sm:text-2xl font-bold rounded-2xl shadow-[0_0_20px_rgba(79,70,229,0.4)] transition-all transform hover:scale-105 flex items-center justify-center gap-2"
               >
-                <Save className="w-5 h-5"/> 이어서 하기
+                <Save className="w-6 h-6"/> 이어서 하기
               </button>
             )}
             <button 
               onClick={startGame}
-              className={`w-full py-3 sm:py-4 text-lg sm:text-xl font-bold rounded-xl transition-all transform hover:scale-105 ${hasSaveData ? 'bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-600' : 'bg-purple-600 hover:bg-purple-500 text-white shadow-[0_0_20px_rgba(168,85,247,0.4)]'}`}
+              className={`w-full py-4 sm:py-5 text-xl sm:text-2xl font-bold rounded-2xl transition-all transform hover:scale-105 ${hasSaveData ? 'bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-600' : 'bg-purple-600 hover:bg-purple-500 text-white shadow-[0_0_20px_rgba(168,85,247,0.4)]'}`}
             >
               새로 시작하기
             </button>
@@ -662,17 +662,17 @@ export default function PotionShopSim() {
 
   if (appState === 'game_over') {
     return (
-      <div className="min-h-[100dvh] bg-red-950 flex flex-col items-center justify-center p-4 text-center">
-        <AlertCircle className="w-20 h-20 sm:w-24 sm:h-24 text-red-500 mb-4 sm:mb-6 animate-bounce" />
-        <h1 className="text-3xl sm:text-4xl font-black text-red-400 mb-2 sm:mb-4">파산했습니다!</h1>
-        <p className="text-red-200 mb-6 sm:mb-8 text-sm sm:text-lg">명성이 바닥에 떨어져 상점을 닫습니다...</p>
-        <div className="bg-slate-900 p-4 sm:p-6 rounded-xl border border-slate-700 mb-6 sm:mb-8 w-56 sm:w-64">
-          <p className="text-slate-400 mb-1 sm:mb-2 text-sm sm:text-base">최종 기록</p>
-          <p className="text-xl sm:text-2xl font-bold text-white">Day {day}</p>
-          <p className="text-lg sm:text-xl font-bold text-yellow-400 mt-1 sm:mt-2">{money} G</p>
+      <div className="min-h-[100dvh] bg-red-950 flex flex-col items-center justify-center p-6 text-center">
+        <AlertCircle className="w-24 h-24 sm:w-32 sm:h-32 text-red-500 mb-6 sm:mb-8 animate-bounce" />
+        <h1 className="text-4xl sm:text-5xl font-black text-red-400 mb-4 sm:mb-6">파산했습니다!</h1>
+        <p className="text-red-200 mb-8 sm:mb-10 text-base sm:text-xl">명성이 바닥에 떨어져 상점을 닫습니다...</p>
+        <div className="bg-slate-900 p-6 sm:p-8 rounded-2xl border border-slate-700 mb-8 sm:mb-10 w-64 sm:w-80">
+          <p className="text-slate-400 mb-2 sm:mb-3 text-base sm:text-lg">최종 기록</p>
+          <p className="text-2xl sm:text-3xl font-bold text-white">Day {day}</p>
+          <p className="text-xl sm:text-2xl font-bold text-yellow-400 mt-2 sm:mt-3">{money} G</p>
         </div>
-        <button onClick={startGame} className="px-6 py-3 sm:px-8 sm:py-3 bg-red-600 hover:bg-red-500 text-white font-bold rounded-lg flex items-center gap-2 text-sm sm:text-base">
-          <RotateCcw className="w-4 h-4 sm:w-5 sm:h-5"/> 처음부터 다시 시작
+        <button onClick={startGame} className="px-8 py-4 sm:px-10 sm:py-5 bg-red-600 hover:bg-red-500 text-white font-bold rounded-xl flex items-center gap-2 text-base sm:text-lg">
+          <RotateCcw className="w-5 h-5 sm:w-6 sm:h-6"/> 처음부터 다시 시작
         </button>
       </div>
     );
@@ -680,17 +680,17 @@ export default function PotionShopSim() {
 
   if (appState === 'day_end') {
     return (
-      <div className="min-h-[100dvh] bg-slate-900 flex flex-col items-center justify-center p-4">
-        <div className="bg-slate-800 p-6 sm:p-8 rounded-2xl border-2 border-purple-500 max-w-sm w-full text-center shadow-[0_0_30px_rgba(168,85,247,0.2)]">
-          <Star className="w-12 h-12 sm:w-16 sm:h-16 text-yellow-400 mx-auto mb-3 sm:mb-4" />
-          <h2 className="text-2xl sm:text-3xl font-bold text-white mb-1 sm:mb-2">영업 종료</h2>
-          <p className="text-purple-300 mb-6 sm:mb-8 text-sm sm:text-base">Day {day}를 무사히 마쳤습니다.</p>
+      <div className="min-h-[100dvh] bg-slate-900 flex flex-col items-center justify-center p-6">
+        <div className="bg-slate-800 p-8 sm:p-10 rounded-3xl border-2 border-purple-500 max-w-md w-full text-center shadow-[0_0_40px_rgba(168,85,247,0.3)]">
+          <Star className="w-16 h-16 sm:w-20 sm:h-20 text-yellow-400 mx-auto mb-4 sm:mb-6" />
+          <h2 className="text-3xl sm:text-4xl font-bold text-white mb-2 sm:mb-4">영업 종료</h2>
+          <p className="text-purple-300 mb-8 sm:mb-10 text-base sm:text-lg">Day {day}를 무사히 마쳤습니다.</p>
           
           <button 
             onClick={() => startNewDay(day + 1, dailyCustomers[dailyCustomers.length - 1].type)}
-            className="w-full py-3 sm:py-4 bg-purple-600 hover:bg-purple-500 text-white font-bold rounded-xl flex items-center justify-center gap-2 transition-all text-sm sm:text-base"
+            className="w-full py-4 sm:py-5 bg-purple-600 hover:bg-purple-500 text-white font-bold rounded-2xl flex items-center justify-center gap-2 transition-all text-base sm:text-lg"
           >
-            다음 날 시작하기 <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5" />
+            다음 날 시작하기 <ArrowRight className="w-5 h-5 sm:w-6 sm:h-6" />
           </button>
         </div>
       </div>
@@ -699,43 +699,43 @@ export default function PotionShopSim() {
 
   if (appState === 'morning_shop') {
     return (
-      <div className="min-h-[100dvh] bg-slate-900 text-slate-100 p-2 sm:p-4 flex flex-col">
+      <div className="min-h-[100dvh] bg-slate-900 text-slate-100 p-4 sm:p-6 flex flex-col">
         {renderTopBar()}
-        <div className="flex-1 bg-slate-800 rounded-2xl border border-slate-700 p-4 sm:p-6 shadow-xl flex flex-col max-w-2xl mx-auto w-full mt-2 sm:mt-4">
-          <h2 className="text-xl sm:text-2xl font-bold text-yellow-400 mb-2 flex items-center gap-2"><ShoppingBag className="w-5 h-5 sm:w-6 sm:h-6"/> 아침 시장</h2>
-          <p className="text-slate-400 text-xs sm:text-sm mb-4 sm:mb-6">오늘 영업을 위해 도구를 준비하세요.</p>
+        <div className="flex-1 bg-slate-800 rounded-3xl border border-slate-700 p-5 sm:p-8 shadow-xl flex flex-col max-w-2xl mx-auto w-full mt-2 sm:mt-4">
+          <h2 className="text-2xl sm:text-3xl font-bold text-yellow-400 mb-2 flex items-center gap-3"><ShoppingBag className="w-6 h-6 sm:w-8 sm:h-8"/> 아침 시장</h2>
+          <p className="text-slate-400 text-sm sm:text-base mb-6 sm:mb-8">오늘 영업을 위해 도구를 준비하세요.</p>
           
-          <div className="flex-1 overflow-y-auto pr-1 sm:pr-2 custom-scrollbar space-y-4 sm:space-y-6">
+          <div className="flex-1 overflow-y-auto pr-2 sm:pr-4 custom-scrollbar space-y-6 sm:space-y-8">
             <div>
-              <h3 className="text-base sm:text-lg font-bold text-blue-300 mb-2 sm:mb-3 border-b border-slate-700 pb-2">도구 구매</h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
+              <h3 className="text-lg sm:text-xl font-bold text-blue-300 mb-3 sm:mb-4 border-b border-slate-700 pb-3">도구 구매</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 <button 
                   onClick={() => buyItem('hintIngredient')}
                   disabled={money < ITEM_COSTS.hintIngredient}
-                  className="bg-slate-900 border border-slate-700 rounded-xl p-3 sm:p-4 flex justify-between items-center hover:border-yellow-500 transition-colors disabled:opacity-50"
+                  className="bg-slate-900 border border-slate-700 rounded-2xl p-4 sm:p-6 flex justify-between items-center hover:border-yellow-500 transition-colors disabled:opacity-50"
                 >
-                  <div className="flex items-center gap-2 sm:gap-3">
-                    <Search className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-400"/>
+                  <div className="flex items-center gap-3 sm:gap-4">
+                    <Search className="w-6 h-6 sm:w-8 sm:h-8 text-indigo-400"/>
                     <div className="text-left">
-                      <div className="text-xs sm:text-sm font-bold">재료 감별 돋보기</div>
-                      <div className="text-[10px] sm:text-xs text-slate-400">보유: {inventory.hintIngredient}</div>
+                      <div className="text-sm sm:text-base font-bold">재료 감별 돋보기</div>
+                      <div className="text-xs sm:text-sm text-slate-400 mt-1">보유: {inventory.hintIngredient}</div>
                     </div>
                   </div>
-                  <div className="text-yellow-400 font-bold text-xs sm:text-sm">{ITEM_COSTS.hintIngredient} G</div>
+                  <div className="text-yellow-400 font-bold text-sm sm:text-base">{ITEM_COSTS.hintIngredient} G</div>
                 </button>
                 <button 
                   onClick={() => buyItem('hintSlot')}
                   disabled={money < ITEM_COSTS.hintSlot}
-                  className="bg-slate-900 border border-slate-700 rounded-xl p-3 sm:p-4 flex justify-between items-center hover:border-yellow-500 transition-colors disabled:opacity-50"
+                  className="bg-slate-900 border border-slate-700 rounded-2xl p-4 sm:p-6 flex justify-between items-center hover:border-yellow-500 transition-colors disabled:opacity-50"
                 >
-                  <div className="flex items-center gap-2 sm:gap-3">
-                    <Eye className="w-4 h-4 sm:w-5 sm:h-5 text-purple-400"/>
+                  <div className="flex items-center gap-3 sm:gap-4">
+                    <Eye className="w-6 h-6 sm:w-8 sm:h-8 text-purple-400"/>
                     <div className="text-left">
-                      <div className="text-xs sm:text-sm font-bold">슬롯 투시 구슬</div>
-                      <div className="text-[10px] sm:text-xs text-slate-400">보유: {inventory.hintSlot}</div>
+                      <div className="text-sm sm:text-base font-bold">슬롯 투시 구슬</div>
+                      <div className="text-xs sm:text-sm text-slate-400 mt-1">보유: {inventory.hintSlot}</div>
                     </div>
                   </div>
-                  <div className="text-yellow-400 font-bold text-xs sm:text-sm">{ITEM_COSTS.hintSlot} G</div>
+                  <div className="text-yellow-400 font-bold text-sm sm:text-base">{ITEM_COSTS.hintSlot} G</div>
                 </button>
               </div>
             </div>
@@ -747,9 +747,9 @@ export default function PotionShopSim() {
               setIsDiagnosing(false);
               setDiagnosisFeedback(null);
             }}
-            className="mt-4 sm:mt-6 w-full py-3 sm:py-4 bg-green-600 hover:bg-green-500 text-white font-bold rounded-xl text-sm sm:text-lg shadow-lg flex justify-center items-center gap-2"
+            className="mt-6 sm:mt-8 w-full py-4 sm:py-5 bg-green-600 hover:bg-green-500 text-white font-bold rounded-2xl text-base sm:text-xl shadow-lg flex justify-center items-center gap-2"
           >
-            <Store className="w-4 h-4 sm:w-5 sm:h-5"/> 영업 시작
+            <Store className="w-5 h-5 sm:w-6 sm:h-6"/> 영업 시작
           </button>
         </div>
       </div>
@@ -757,7 +757,7 @@ export default function PotionShopSim() {
   }
 
   return (
-    <div className="min-h-[100dvh] bg-slate-900 text-slate-100 p-2 sm:p-4 font-sans selection:bg-purple-500/30 flex flex-col">
+    <div className="min-h-[100dvh] h-[100dvh] bg-slate-900 text-slate-100 p-3 sm:p-5 font-sans selection:bg-purple-500/30 flex flex-col">
       <style>{`
         @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-4px); } 50% { transform: translateX(4px); } 75% { transform: translateX(-4px); } }
         .animate-shake { animation: shake 0.3s ease-in-out infinite; }
@@ -778,16 +778,16 @@ export default function PotionShopSim() {
       `}</style>
 
       {tutorial.isActive && tutorial.step !== 'finish' && (
-        <div className="fixed top-4 sm:top-10 left-1/2 -translate-x-1/2 w-[95%] max-w-md bg-indigo-950/95 border-2 border-indigo-400 p-4 sm:p-6 rounded-2xl z-[100] shadow-[0_0_30px_rgba(99,102,241,0.5)] animate-in slide-in-from-top-4 backdrop-blur-sm">
-          <h3 className="text-indigo-300 font-black mb-2 flex items-center gap-2 text-sm sm:text-base"><Info className="w-5 h-5"/> 튜토리얼 안내</h3>
-          <p className="text-white text-sm sm:text-base leading-relaxed whitespace-pre-wrap">{getTutorialMessage()}</p>
+        <div className="fixed top-6 sm:top-12 left-1/2 -translate-x-1/2 w-[95%] max-w-lg bg-indigo-950/95 border-2 border-indigo-400 p-5 sm:p-8 rounded-3xl z-[100] shadow-[0_0_40px_rgba(99,102,241,0.5)] animate-in slide-in-from-top-4 backdrop-blur-sm">
+          <h3 className="text-indigo-300 font-black mb-3 flex items-center gap-2 text-base sm:text-lg"><Info className="w-6 h-6"/> 튜토리얼 안내</h3>
+          <p className="text-white text-base sm:text-lg leading-relaxed whitespace-pre-wrap">{getTutorialMessage()}</p>
           {(tutorial.step === 'explain_1' || tutorial.step === 'explain_2') && (
             <button 
               onClick={() => {
                 if (tutorial.step === 'explain_1') setTutorial(p => ({...p, step: 'guess_2'}));
                 if (tutorial.step === 'explain_2') setTutorial(p => ({...p, step: 'guess_3'}));
               }}
-              className="mt-4 w-full py-3 bg-indigo-600 hover:bg-indigo-500 rounded-xl font-bold text-white transition-all shadow-lg"
+              className="mt-5 w-full py-4 bg-indigo-600 hover:bg-indigo-500 rounded-2xl font-bold text-white text-base sm:text-lg transition-all shadow-lg"
             >
               다음으로
             </button>
@@ -795,75 +795,73 @@ export default function PotionShopSim() {
         </div>
       )}
 
-      <div className="max-w-2xl mx-auto w-full relative overflow-hidden pb-2 sm:pb-4 flex-1 flex flex-col">
+      <div className="max-w-2xl mx-auto w-full relative overflow-hidden flex-1 flex flex-col h-full min-h-0">
         {renderTopBar()}
 
         {appState === 'shop' && currentCustomer && (
-          <div className="bg-slate-900 rounded-t-3xl border-4 border-slate-700 flex-1 overflow-hidden relative shadow-2xl flex flex-col justify-end animate-in fade-in duration-500 min-h-[450px]">
-            <div className="absolute top-3 left-3 sm:top-4 sm:left-4 bg-slate-900/80 px-2 py-1 sm:px-3 sm:py-1 rounded-full text-xs sm:text-sm font-semibold text-slate-300 flex items-center gap-1 sm:gap-2 z-10 border border-slate-700">
-              <Users className="w-3 h-3 sm:w-4 sm:h-4" /> 
+          <div className="bg-slate-900 rounded-t-3xl border-4 border-slate-700 flex-1 relative shadow-2xl flex flex-col justify-between animate-in fade-in duration-500 min-h-0 overflow-hidden">
+            <div className="absolute top-4 left-4 bg-slate-900/80 px-3 py-1.5 sm:px-4 sm:py-2 rounded-full text-sm sm:text-base font-semibold text-slate-300 flex items-center gap-2 z-10 border border-slate-700">
+              <Users className="w-4 h-4 sm:w-5 sm:h-5" /> 
               대기표: {currentCustomerIndex + 1} / {dailyCustomers.length}
             </div>
 
-            <div className="relative z-10 flex flex-col items-center animate-walk-in pt-12 sm:pt-0">
-              <div className="bg-white text-slate-900 p-3 sm:p-5 rounded-2xl rounded-br-none mb-2 sm:mb-4 shadow-xl w-[90%] sm:max-w-sm relative mx-auto animate-pop-up">
-                <h3 className="text-base sm:text-lg font-black text-slate-800 mb-1">{currentCustomer.name}</h3>
-                <p className="text-xs sm:text-base text-slate-700 italic font-medium leading-relaxed break-keep">"{currentCustomer.dialogue}"</p>
+            <div className="relative z-10 flex flex-col items-center justify-center flex-1 animate-walk-in pt-16 pb-6 min-h-0">
+              <div className="bg-white text-slate-900 p-5 sm:p-7 rounded-3xl rounded-br-none mb-4 sm:mb-6 shadow-xl w-[90%] max-w-sm relative mx-auto animate-pop-up flex-shrink-0">
+                <h3 className="text-lg sm:text-xl font-black text-slate-800 mb-2">{currentCustomer.name}</h3>
+                <p className="text-base sm:text-lg text-slate-700 italic font-medium leading-relaxed break-keep">"{currentCustomer.dialogue}"</p>
                 
-                <div className="mt-2 sm:mt-4 pt-2 sm:pt-3 border-t border-slate-200 flex justify-between items-end gap-1 sm:gap-2">
+                <div className="mt-4 sm:mt-5 pt-3 sm:pt-4 border-t border-slate-200 flex justify-between items-end gap-2">
                   <div className="flex flex-col flex-1">
-                    <span className="text-[10px] sm:text-xs text-slate-500 font-bold mb-0.5 sm:mb-1">상태</span>
-                    <span className="bg-slate-100 text-slate-600 px-2 py-1 sm:px-3 sm:py-1 rounded-full text-[10px] sm:text-xs font-bold flex items-center gap-1 w-fit">
-                      <Search className="w-3 h-3" /> 대기중...
+                    <span className="text-xs sm:text-sm text-slate-500 font-bold mb-1">상태</span>
+                    <span className="bg-slate-100 text-slate-600 px-3 py-1.5 rounded-full text-xs sm:text-sm font-bold flex items-center gap-1.5 w-fit">
+                      <Search className="w-3 h-3 sm:w-4 sm:h-4" /> 대기중...
                     </span>
                   </div>
                   <div className="flex flex-col items-end">
-                    <span className="text-[10px] sm:text-xs text-slate-500 font-bold mb-0.5 sm:mb-1">예상 보수</span>
-                    <span className="text-amber-600 font-black flex items-center gap-1 text-sm sm:text-base">
+                    <span className="text-xs sm:text-sm text-slate-500 font-bold mb-1">예상 보수</span>
+                    <span className="text-amber-600 font-black flex items-center gap-1.5 text-base sm:text-xl">
                       {currentCustomer.baseReward} G
                     </span>
                   </div>
                 </div>
-                <div className="absolute -bottom-3 right-6 sm:-bottom-4 sm:right-10 w-0 h-0 border-l-[12px] sm:border-l-[16px] border-l-transparent border-t-[12px] sm:border-t-[16px] border-t-white border-r-[12px] sm:border-r-[16px] border-r-transparent"></div>
+                <div className="absolute -bottom-4 right-8 sm:right-12 w-0 h-0 border-l-[16px] sm:border-l-[20px] border-l-transparent border-t-[16px] sm:border-t-[20px] border-t-white border-r-[16px] sm:border-r-[20px] border-r-transparent"></div>
               </div>
 
               {diagnosisFeedback && (
-                <div className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 text-2xl sm:text-4xl font-black px-4 sm:px-6 py-3 sm:py-4 rounded-2xl shadow-2xl animate-bounce border-4 whitespace-nowrap flex items-center gap-1 sm:gap-2 ${diagnosisFeedback === 'success' ? 'bg-green-100 text-green-600 border-green-500' : 'bg-red-100 text-red-600 border-red-500'}`}>
-                  {diagnosisFeedback === 'success' ? <><CheckCircle2 className="w-6 h-6 sm:w-10 sm:h-10"/> 성공!</> : <><XCircle className="w-6 h-6 sm:w-10 sm:h-10"/> 오진!</>}
+                <div className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 text-3xl sm:text-5xl font-black px-6 sm:px-8 py-4 sm:py-6 rounded-3xl shadow-2xl animate-bounce border-4 whitespace-nowrap flex items-center gap-2 sm:gap-3 ${diagnosisFeedback === 'success' ? 'bg-green-100 text-green-600 border-green-500' : 'bg-red-100 text-red-600 border-red-500'}`}>
+                  {diagnosisFeedback === 'success' ? <><CheckCircle2 className="w-8 h-8 sm:w-12 sm:h-12"/> 성공!</> : <><XCircle className="w-8 h-8 sm:w-12 sm:h-12"/> 오진!</>}
                 </div>
               )}
 
-              <div className={`text-[80px] sm:text-[120px] leading-none filter drop-shadow-[0_10px_10px_rgba(0,0,0,0.5)] translate-y-2 transition-all ${diagnosisFeedback === 'fail' ? 'grayscale opacity-50' : ''}`}>
+              <div className={`text-[120px] sm:text-[160px] leading-none filter drop-shadow-[0_10px_10px_rgba(0,0,0,0.5)] translate-y-2 transition-all flex-shrink min-h-0 flex items-center justify-center ${diagnosisFeedback === 'fail' ? 'grayscale opacity-50' : ''}`}>
                 {currentCustomer.emoji}
               </div>
             </div>
 
-            <div className="bg-amber-900 w-full border-t-[8px] sm:border-t-[12px] border-amber-800 shadow-[0_-10px_30px_rgba(0,0,0,0.5)] z-20 relative shrink-0">
-              <div className="absolute top-0 w-full h-1 sm:h-2 bg-white/10"></div>
+            <div className="bg-amber-900 w-full border-t-[12px] sm:border-t-[16px] border-amber-800 shadow-[0_-10px_30px_rgba(0,0,0,0.5)] z-20 relative shrink-0">
+              <div className="absolute top-0 w-full h-1.5 sm:h-2 bg-white/10"></div>
               
               {!isDiagnosing ? (
-                <div className="h-20 sm:h-32 flex flex-col sm:flex-row items-center justify-center px-4 gap-2 sm:gap-4 py-2 sm:py-0">
+                <div className="p-4 sm:p-6 flex justify-center items-center min-h-[100px] sm:min-h-[140px]">
                   <button 
                     onClick={() => setIsDiagnosing(true)}
                     disabled={diagnosisFeedback !== null || (tutorial.isActive && tutorial.step !== 'start_prescription')}
-                    className={`w-full sm:w-auto px-4 py-2.5 sm:px-8 sm:py-4 hover:bg-indigo-500 text-white font-black text-sm sm:text-xl rounded-xl shadow-[0_6px_0_rgba(67,56,202,1)] sm:shadow-[0_8px_0_rgba(67,56,202,1)] hover:translate-y-[2px] transition-all flex items-center justify-center gap-2 sm:gap-3 animate-fade-in-btn disabled:opacity-50 disabled:cursor-not-allowed ${tutorial.isActive && tutorial.step === 'start_prescription' ? 'bg-indigo-500 animate-pulse ring-4 ring-indigo-400' : 'bg-indigo-600'}`}
+                    className={`w-full max-w-sm py-4 sm:py-5 hover:bg-indigo-500 text-white font-black text-lg sm:text-2xl rounded-2xl shadow-[0_8px_0_rgba(67,56,202,1)] sm:shadow-[0_10px_0_rgba(67,56,202,1)] hover:translate-y-[2px] transition-all flex items-center justify-center gap-2 sm:gap-3 animate-fade-in-btn disabled:opacity-50 disabled:cursor-not-allowed ${tutorial.isActive && tutorial.step === 'start_prescription' ? 'bg-indigo-500 animate-pulse ring-4 ring-indigo-400' : 'bg-indigo-600'}`}
                   >
-                    <ScrollText className="w-4 h-4 sm:w-6 sm:h-6" /> 처방전 작성하기
+                    <ScrollText className="w-6 h-6 sm:w-8 sm:h-8" /> 처방전 작성하기
                   </button>
                 </div>
               ) : (
-                <div className="bg-slate-800 border-t-4 border-slate-600 animate-slide-up rounded-t-2xl flex flex-col max-h-[45vh] sm:max-h-[300px]">
-                  <div className="flex justify-between items-center p-3 sm:p-4 border-b border-slate-700 bg-slate-800 shrink-0 z-10 rounded-t-2xl">
-                    <h3 className="text-white font-bold flex items-center gap-1 sm:gap-2 text-xs sm:text-base"><ScrollText className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-400"/> 알맞은 약을 고르세요</h3>
-                    <button onClick={() => setIsDiagnosing(false)} className="text-slate-400 hover:text-white bg-slate-700 p-1 rounded">
-                      <X className="w-4 h-4 sm:w-5 sm:h-5"/>
+                <div className="bg-slate-800 border-t-4 border-slate-600 animate-slide-up rounded-t-3xl flex flex-col max-h-[60vh] sm:max-h-[50vh]">
+                  <div className="flex justify-between items-center p-4 sm:p-5 border-b border-slate-700 bg-slate-800 shrink-0 z-10 rounded-t-3xl">
+                    <h3 className="text-white font-bold flex items-center gap-2 sm:gap-3 text-base sm:text-lg"><ScrollText className="w-5 h-5 sm:w-6 sm:h-6 text-indigo-400"/> 알맞은 약을 고르세요</h3>
+                    <button onClick={() => setIsDiagnosing(false)} className="text-slate-400 hover:text-white bg-slate-700 p-2 rounded-xl transition-colors">
+                      <X className="w-5 h-5 sm:w-6 sm:h-6"/>
                     </button>
                   </div>
-                  <div className="p-2 sm:p-4 overflow-y-auto custom-scrollbar flex-1">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 sm:gap-2 pb-2">
-                      {POTION_CATALOG.map((potionName, idx) => {
-                        const potionInfo = POTION_DB[potionName];
-                        const isLocked = potionInfo.reqRep > reputation;
+                  <div className="p-3 sm:p-5 overflow-y-auto custom-scrollbar flex-1">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3 pb-2">
+                      {POTION_CATALOG.filter(potionName => POTION_DB[potionName].reqRep <= reputation || (tutorial.isActive && potionName === '깊은 밤의 숙면 물약')).map((potionName, idx) => {
                         const isTutorialTarget = tutorial.isActive && potionName === '깊은 밤의 숙면 물약';
                         const isTutorialDisabled = tutorial.isActive && !isTutorialTarget;
 
@@ -871,18 +869,17 @@ export default function PotionShopSim() {
                           <button
                             key={idx}
                             onClick={() => handleDiagnose(potionName)}
-                            disabled={diagnosisFeedback !== null || isTutorialDisabled || isLocked}
-                            className={`p-2 sm:p-3 text-left rounded-lg sm:rounded-xl text-[11px] sm:text-sm font-semibold transition-colors flex items-center justify-between gap-2 border ${
+                            disabled={diagnosisFeedback !== null || isTutorialDisabled}
+                            className={`p-3 sm:p-4 text-left rounded-xl sm:rounded-2xl text-sm sm:text-base font-semibold transition-colors flex items-center justify-between gap-3 border shadow-sm ${
                               isTutorialTarget ? 'bg-indigo-600 text-white border-indigo-400 animate-pulse ring-2 ring-indigo-500' : 
-                              (isTutorialDisabled || isLocked) ? 'bg-slate-800 text-slate-500 border-slate-700 cursor-not-allowed' :
+                              isTutorialDisabled ? 'bg-slate-800 text-slate-500 border-slate-700 cursor-not-allowed' :
                               'bg-slate-700 hover:bg-indigo-600 text-slate-200 hover:text-white border-slate-600 hover:border-indigo-400'
                             }`}
                           >
-                            <div className="flex items-center gap-2 overflow-hidden">
-                              {isLocked ? <Lock className="w-3 h-3 sm:w-4 sm:h-4 opacity-50 shrink-0"/> : <FlaskConical className="w-3 h-3 sm:w-4 sm:h-4 opacity-70 shrink-0" />}
-                              <span className="truncate">{potionName}</span>
+                            <div className="flex items-center gap-2.5 overflow-hidden">
+                              <FlaskConical className="w-4 h-4 sm:w-5 sm:h-5 opacity-70 shrink-0" />
+                              <span className="truncate text-base sm:text-lg">{potionName}</span>
                             </div>
-                            {isLocked && <span className="text-[9px] sm:text-[10px] text-red-400 font-bold shrink-0 bg-red-900/30 px-1.5 py-0.5 rounded">명성 {potionInfo.reqRep}</span>}
                           </button>
                         );
                       })}
@@ -895,50 +892,50 @@ export default function PotionShopSim() {
         )}
 
         {appState === 'minigame' && (
-          <div className="flex flex-col flex-1 gap-2 sm:gap-4 h-full relative">
+          <div className="flex flex-col flex-1 gap-3 sm:gap-5 h-full relative min-h-0">
             
             {minigameResult && (
               <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-                <div className={`bg-slate-800 border-2 rounded-2xl p-6 sm:p-8 max-w-sm w-full text-center space-y-4 sm:space-y-6 animate-in zoom-in-95 ${minigameResult.status === 'win' ? 'border-green-500 shadow-[0_0_40px_rgba(34,197,94,0.3)]' : 'border-red-500 shadow-[0_0_40px_rgba(239,68,68,0.3)]'}`}>
-                  <div className="text-5xl sm:text-6xl mb-2">{minigameResult.status === 'win' ? '🎇' : '💥'}</div>
-                  <h2 className={`text-xl sm:text-2xl font-bold ${minigameResult.status === 'win' ? 'text-green-400' : 'text-red-400'}`}>
+                <div className={`bg-slate-800 border-2 rounded-3xl p-6 sm:p-10 max-w-md w-full text-center space-y-5 sm:space-y-8 animate-in zoom-in-95 ${minigameResult.status === 'win' ? 'border-green-500 shadow-[0_0_50px_rgba(34,197,94,0.3)]' : 'border-red-500 shadow-[0_0_50px_rgba(239,68,68,0.3)]'}`}>
+                  <div className="text-6xl sm:text-7xl mb-3">{minigameResult.status === 'win' ? '🎇' : '💥'}</div>
+                  <h2 className={`text-2xl sm:text-3xl font-bold ${minigameResult.status === 'win' ? 'text-green-400' : 'text-red-400'}`}>
                     {minigameResult.status === 'win' ? '완벽한 조제!' : '조제 실패...'}
                   </h2>
                   
                   {tutorial.isActive && minigameResult.status === 'win' ? (
-                    <div className="bg-indigo-900/50 border border-indigo-500 p-3 rounded-lg mt-2 text-indigo-200 text-sm break-keep">
+                    <div className="bg-indigo-900/50 border border-indigo-500 p-4 rounded-xl mt-3 text-indigo-200 text-base sm:text-lg break-keep">
                       튜토리얼을 훌륭하게 완수했습니다!<br/>이제 진짜 상점 운영을 시작해보세요.
                     </div>
                   ) : (
                     <>
                       {minigameResult.status === 'win' && (
-                        <p className="text-sm sm:text-base text-slate-300">남은 기회에 비례하여<br/>추가 팁을 받았습니다!</p>
+                        <p className="text-base sm:text-lg text-slate-300">남은 기회에 비례하여<br/>추가 팁을 받았습니다!</p>
                       )}
                       {minigameResult.status === 'lose' && (
-                        <p className="text-sm sm:text-base text-slate-300">가마솥이 폭발하여 손님이 화를 내며 나갔습니다.</p>
+                        <p className="text-base sm:text-lg text-slate-300">가마솥이 폭발하여 손님이 화를 내며 나갔습니다.</p>
                       )}
                     </>
                   )}
 
-                  <div className="flex justify-center gap-4 sm:gap-6 py-3 sm:py-4 bg-slate-900 rounded-xl mt-4">
+                  <div className="flex justify-center gap-5 sm:gap-8 py-4 sm:py-6 bg-slate-900 rounded-2xl mt-5">
                     <div className="text-center flex flex-col justify-end">
-                      <p className="text-xs sm:text-sm text-slate-400 mb-1">획득 골드</p>
-                      <p className={`font-bold text-base sm:text-lg flex flex-col items-center justify-center ${minigameResult.earnedMoney > 0 ? 'text-yellow-400' : 'text-slate-500'}`}>
-                        <span className="flex items-center gap-1">{minigameResult.earnedMoney > 0 ? '+' : ''}{minigameResult.earnedMoney} <Coins className="w-3 h-3 sm:w-4 sm:h-4"/></span>
-                        {minigameResult.tip > 0 && <span className="text-[10px] sm:text-xs text-yellow-600/80 mt-1">(기본 {minigameResult.baseReward} + 팁 {minigameResult.tip})</span>}
+                      <p className="text-sm sm:text-base text-slate-400 mb-1.5">획득 골드</p>
+                      <p className={`font-bold text-lg sm:text-xl flex flex-col items-center justify-center ${minigameResult.earnedMoney > 0 ? 'text-yellow-400' : 'text-slate-500'}`}>
+                        <span className="flex items-center gap-1.5">{minigameResult.earnedMoney > 0 ? '+' : ''}{minigameResult.earnedMoney} <Coins className="w-4 h-4 sm:w-5 sm:h-5"/></span>
+                        {minigameResult.tip > 0 && <span className="text-xs sm:text-sm text-yellow-600/80 mt-1.5">(기본 {minigameResult.baseReward} + 팁 {minigameResult.tip})</span>}
                       </p>
                     </div>
-                    <div className="text-center flex flex-col justify-start border-l border-slate-700 pl-4 sm:pl-6">
-                      <p className="text-xs sm:text-sm text-slate-400 mb-1">명성 변화</p>
-                      <p className={`font-bold text-base sm:text-lg flex items-center justify-center gap-1 ${minigameResult.earnedRep > 0 ? 'text-blue-400' : 'text-red-400'}`}>
-                        {minigameResult.earnedRep > 0 ? '+' : ''}{minigameResult.earnedRep} <Star className="w-3 h-3 sm:w-4 sm:h-4"/>
+                    <div className="text-center flex flex-col justify-start border-l border-slate-700 pl-5 sm:pl-8">
+                      <p className="text-sm sm:text-base text-slate-400 mb-1.5">명성 변화</p>
+                      <p className={`font-bold text-lg sm:text-xl flex items-center justify-center gap-1.5 ${minigameResult.earnedRep > 0 ? 'text-blue-400' : 'text-red-400'}`}>
+                        {minigameResult.earnedRep > 0 ? '+' : ''}{minigameResult.earnedRep} <Star className="w-4 h-4 sm:w-5 sm:h-5"/>
                       </p>
                     </div>
                   </div>
 
                   <button 
                     onClick={returnToShop}
-                    className="w-full py-3 bg-slate-700 hover:bg-slate-600 text-white font-bold rounded-lg transition-colors text-sm sm:text-base"
+                    className="w-full py-4 sm:py-5 bg-slate-700 hover:bg-slate-600 text-white font-bold rounded-xl transition-colors text-base sm:text-xl"
                   >
                     상점 홀로 돌아가기
                   </button>
@@ -946,59 +943,59 @@ export default function PotionShopSim() {
               </div>
             )}
 
-            <div className="flex justify-between items-end shrink-0">
+            <div className="flex justify-between items-end shrink-0 px-1">
               <div>
-                <h2 className="text-lg sm:text-2xl font-bold text-purple-300 flex items-center gap-1.5 sm:gap-2">
-                  <FlaskConical className="w-5 h-5 sm:w-6 sm:h-6" /> 조제실
+                <h2 className="text-xl sm:text-2xl font-bold text-purple-300 flex items-center gap-2">
+                  <FlaskConical className="w-6 h-6 sm:w-7 sm:h-7" /> 조제실
                 </h2>
-                <p className="text-[11px] sm:text-sm text-slate-400 mt-1 truncate max-w-[180px] sm:max-w-xs">
+                <p className="text-sm sm:text-base text-slate-400 mt-1.5 truncate max-w-[200px] sm:max-w-xs font-semibold">
                   {currentCustomer?.potionName}
                 </p>
               </div>
             </div>
 
-            <div className="bg-slate-800 p-2 sm:p-3 rounded-xl border border-slate-700 flex flex-wrap gap-2 sm:gap-4 items-center shrink-0">
-              <span className="hidden sm:flex text-sm text-slate-400 font-bold items-center gap-1"><PackageOpen className="w-4 h-4"/> 도구함</span>
+            <div className="bg-slate-800 p-3 sm:p-4 rounded-2xl border border-slate-700 flex flex-wrap gap-3 sm:gap-5 items-center shrink-0">
+              <span className="hidden sm:flex text-base text-slate-400 font-bold items-center gap-1.5"><PackageOpen className="w-5 h-5"/> 도구함</span>
               
               {activeItemMode && (
-                <span className="w-full sm:w-auto text-center sm:text-left text-[10px] sm:text-xs text-blue-300 animate-pulse font-bold bg-blue-900/40 px-2 py-1 rounded mr-auto">
+                <span className="w-full sm:w-auto text-center sm:text-left text-xs sm:text-sm text-blue-300 animate-pulse font-bold bg-blue-900/40 px-3 py-1.5 rounded-lg mr-auto">
                   {activeItemMode === 'hintIngredient' ? '감별할 재료 클릭!' : '투시할 칸 클릭!'}
                 </span>
               )}
 
-              <div className="flex gap-1.5 sm:gap-2 w-full sm:w-auto ml-auto">
+              <div className="flex gap-2 sm:gap-3 w-full sm:w-auto ml-auto">
                 <button 
                   onClick={() => setActiveItemMode(activeItemMode === 'hintIngredient' ? null : 'hintIngredient')}
                   disabled={inventory.hintIngredient <= 0 || brewPhase !== 'idle' || tutorial.isActive}
-                  className={`flex-1 sm:flex-none flex items-center justify-center gap-1 sm:gap-2 px-2 py-1.5 sm:px-3 sm:py-2 rounded-lg text-xs sm:text-sm font-bold transition-all ${
+                  className={`flex-1 sm:flex-none flex items-center justify-center gap-1.5 sm:gap-2 px-3 py-2 sm:px-4 sm:py-2.5 rounded-xl text-sm sm:text-base font-bold transition-all ${
                     activeItemMode === 'hintIngredient' 
                       ? 'bg-indigo-600 text-white shadow-[0_0_15px_rgba(79,70,229,0.8)]' 
                       : inventory.hintIngredient > 0 && !tutorial.isActive ? 'bg-slate-700 hover:bg-slate-600 text-indigo-300' : 'bg-slate-900 text-slate-600 cursor-not-allowed'
                   }`}
                 >
-                  <Search className="w-3 h-3 sm:w-4 sm:h-4" /> 돋보기 ({inventory.hintIngredient})
+                  <Search className="w-4 h-4 sm:w-5 sm:h-5" /> 돋보기 ({inventory.hintIngredient})
                 </button>
 
                 <button 
                   onClick={() => setActiveItemMode(activeItemMode === 'hintSlot' ? null : 'hintSlot')}
                   disabled={inventory.hintSlot <= 0 || brewPhase !== 'idle' || tutorial.isActive}
-                  className={`flex-1 sm:flex-none flex items-center justify-center gap-1 sm:gap-2 px-2 py-1.5 sm:px-3 sm:py-2 rounded-lg text-xs sm:text-sm font-bold transition-all ${
+                  className={`flex-1 sm:flex-none flex items-center justify-center gap-1.5 sm:gap-2 px-3 py-2 sm:px-4 sm:py-2.5 rounded-xl text-sm sm:text-base font-bold transition-all ${
                     activeItemMode === 'hintSlot' 
                       ? 'bg-purple-600 text-white shadow-[0_0_15px_rgba(147,51,234,0.8)]' 
                       : inventory.hintSlot > 0 && !tutorial.isActive ? 'bg-slate-700 hover:bg-slate-600 text-purple-300' : 'bg-slate-900 text-slate-600 cursor-not-allowed'
                   }`}
                 >
-                  <Eye className="w-3 h-3 sm:w-4 sm:h-4" /> 구슬 ({inventory.hintSlot})
+                  <Eye className="w-4 h-4 sm:w-5 sm:h-5" /> 구슬 ({inventory.hintSlot})
                 </button>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-2 sm:gap-6 shrink-0">
-              <div className={`bg-slate-800 p-3 sm:p-4 rounded-xl border transition-all ${activeItemMode === 'hintIngredient' ? 'animate-pulse-glow' : 'border-slate-700'}`}>
-                <div className="flex justify-between items-center mb-2 sm:mb-4">
-                  <h3 className="text-sm sm:text-lg font-semibold text-slate-200">재료 선반</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-6 shrink-0">
+              <div className={`bg-slate-800 p-4 sm:p-5 rounded-2xl border transition-all ${activeItemMode === 'hintIngredient' ? 'animate-pulse-glow' : 'border-slate-700'}`}>
+                <div className="flex justify-between items-center mb-3 sm:mb-5">
+                  <h3 className="text-base sm:text-lg font-bold text-slate-200">재료 선반</h3>
                 </div>
-                <div className="grid grid-cols-5 md:grid-cols-5 gap-1 sm:gap-2">
+                <div className="grid grid-cols-5 gap-2 sm:gap-3">
                   {INGREDIENTS.map(item => {
                     const isSelected = currentGuess.includes(item.id);
                     const isKnown = knownIngredients[item.id] !== undefined;
@@ -1013,18 +1010,18 @@ export default function PotionShopSim() {
                         onClick={() => handleIngredientClick(item.id)}
                         disabled={minigameResult !== null || brewPhase !== 'idle' || (!isItemTarget && !isSelected && !currentGuess.includes(null)) || (activeItemMode === 'hintIngredient' && isKnown) || isTutDisabled}
                         className={`
-                          relative p-1.5 sm:p-2 rounded-lg sm:rounded-xl flex flex-col items-center justify-center transition-all duration-300 border-2
-                          ${isSelected && !activeItemMode ? 'bg-slate-700 border-purple-500 shadow-[0_0_10px_rgba(168,85,247,0.5)] transform scale-105' : 'bg-slate-900 border-slate-700'}
-                          ${isItemTarget ? 'hover:border-indigo-400 hover:shadow-[0_0_10px_rgba(99,102,241,0.5)] cursor-crosshair' : ''}
+                          relative p-2 sm:p-3 rounded-xl flex flex-col items-center justify-center transition-all duration-300 border-2
+                          ${isSelected && !activeItemMode ? 'bg-slate-700 border-purple-500 shadow-[0_0_15px_rgba(168,85,247,0.5)] transform scale-105' : 'bg-slate-900 border-slate-700'}
+                          ${isItemTarget ? 'hover:border-indigo-400 hover:shadow-[0_0_15px_rgba(99,102,241,0.5)] cursor-crosshair' : ''}
                           ${(!activeItemMode && !isSelected && !currentGuess.includes(null)) || isTutDisabled ? 'opacity-50 cursor-not-allowed' : 'hover:-translate-y-1'}
                           ${isTutTarget ? 'ring-4 ring-indigo-400 animate-pulse border-indigo-400 bg-indigo-900/30' : ''}
                         `}
                       >
-                        <span className="text-xl sm:text-2xl mb-0.5 sm:mb-1">{item.emoji}</span>
-                        <span className="text-[8px] sm:text-[10px] text-center text-slate-300 leading-tight break-keep">{item.name}</span>
+                        <span className="text-2xl sm:text-3xl mb-1 sm:mb-1.5">{item.emoji}</span>
+                        <span className="text-[10px] sm:text-xs text-center text-slate-300 font-medium leading-tight break-keep">{item.name}</span>
                         
                         {isKnown && (
-                          <div className="absolute -top-1 -right-1 sm:-top-2 sm:-right-2 bg-slate-800 rounded-full w-4 h-4 sm:w-6 sm:h-6 flex items-center justify-center border border-slate-600 shadow-lg text-[8px] sm:text-xs">
+                          <div className="absolute -top-1.5 -right-1.5 sm:-top-2.5 sm:-right-2.5 bg-slate-800 rounded-full w-5 h-5 sm:w-6 sm:h-6 flex items-center justify-center border border-slate-600 shadow-lg text-[10px] sm:text-xs">
                             {knownIngredients[item.id] ? '✅' : '❌'}
                           </div>
                         )}
@@ -1035,23 +1032,23 @@ export default function PotionShopSim() {
               </div>
 
               <div className={`
-                bg-slate-800 p-3 sm:p-6 rounded-xl border flex flex-col relative overflow-hidden transition-all duration-500
-                ${brewPhase === 'heating' ? 'border-orange-500 shadow-[0_0_30px_rgba(249,115,22,0.3)] animate-shake' : ''}
-                ${brewPhase === 'mixing' ? 'border-purple-500 shadow-[0_0_40px_rgba(168,85,247,0.5)] animate-pulse-fast bg-slate-700' : ''}
+                bg-slate-800 p-4 sm:p-6 rounded-2xl border flex flex-col relative overflow-hidden transition-all duration-500
+                ${brewPhase === 'heating' ? 'border-orange-500 shadow-[0_0_40px_rgba(249,115,22,0.3)] animate-shake' : ''}
+                ${brewPhase === 'mixing' ? 'border-purple-500 shadow-[0_0_50px_rgba(168,85,247,0.5)] animate-pulse-fast bg-slate-700' : ''}
                 ${activeItemMode === 'hintSlot' ? 'animate-pulse-glow' : (!brewPhase || brewPhase === 'idle' ? 'border-slate-700' : '')}
               `}>
                 
                 {brewPhase !== 'idle' && (
-                  <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/40 backdrop-blur-[2px] rounded-xl">
-                    <span className="text-lg sm:text-2xl font-black text-white drop-shadow-[0_4px_4px_rgba(0,0,0,0.8)] animate-bounce">
+                  <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/40 backdrop-blur-[2px] rounded-2xl">
+                    <span className="text-2xl sm:text-3xl font-black text-white drop-shadow-[0_4px_4px_rgba(0,0,0,0.8)] animate-bounce">
                       {effectText}
                     </span>
                   </div>
                 )}
 
-                <h3 className="text-sm sm:text-lg font-semibold text-slate-200 mb-2 sm:mb-4 text-center z-10 relative">투입된 재료 ({currentCustomer.slots}칸)</h3>
+                <h3 className="text-base sm:text-lg font-bold text-slate-200 mb-4 sm:mb-6 text-center z-10 relative">투입된 재료 ({currentCustomer.slots}칸)</h3>
                 
-                <div className="flex justify-center gap-1.5 sm:gap-3 mb-4 sm:mb-8 z-10 relative flex-1 items-center w-full">
+                <div className="flex justify-center gap-2 sm:gap-4 mb-6 sm:mb-8 z-10 relative flex-1 items-center w-full">
                   {Array.from({ length: currentCustomer?.slots || 3 }).map((_, index) => {
                     const guessId = currentGuess[index];
                     const item = guessId ? getIngredientDetails(guessId) : null;
@@ -1065,17 +1062,17 @@ export default function PotionShopSim() {
                         key={index} 
                         onClick={() => handleSlotClick(index, guessId)}
                         className={`
-                          relative w-10 h-10 sm:w-14 sm:h-14 md:w-16 md:h-16 shrink-0 rounded-full border-2 flex items-center justify-center text-lg sm:text-3xl transition-all duration-300
-                          ${item ? 'bg-slate-800 border-purple-400 shadow-[inset_0_0_10px_rgba(168,85,247,0.4)]' : 'bg-slate-900 border-slate-700 border-dashed'}
-                          ${isItemTarget ? 'cursor-crosshair hover:border-purple-400 hover:shadow-[0_0_10px_rgba(168,85,247,0.5)]' : (item && !activeItemMode && !tutorial.isActive ? 'cursor-pointer' : '')}
-                          ${isSelectedEmptySlot && !tutorial.isActive ? 'border-blue-400 shadow-[0_0_10px_rgba(96,165,250,0.6)] animate-pulse cursor-pointer' : (!item && !activeItemMode && !tutorial.isActive ? 'cursor-pointer hover:border-slate-500' : '')}
-                          ${brewPhase === 'heating' ? 'animate-bounce shadow-[inset_0_0_15px_rgba(249,115,22,0.8)] border-orange-400' : ''}
+                          relative w-12 h-12 sm:w-16 sm:h-16 md:w-20 md:h-20 shrink-0 rounded-full border-2 flex items-center justify-center text-2xl sm:text-4xl transition-all duration-300
+                          ${item ? 'bg-slate-800 border-purple-400 shadow-[inset_0_0_15px_rgba(168,85,247,0.4)]' : 'bg-slate-900 border-slate-700 border-dashed'}
+                          ${isItemTarget ? 'cursor-crosshair hover:border-purple-400 hover:shadow-[0_0_15px_rgba(168,85,247,0.5)]' : (item && !activeItemMode && !tutorial.isActive ? 'cursor-pointer' : '')}
+                          ${isSelectedEmptySlot && !tutorial.isActive ? 'border-blue-400 shadow-[0_0_15px_rgba(96,165,250,0.6)] animate-pulse cursor-pointer' : (!item && !activeItemMode && !tutorial.isActive ? 'cursor-pointer hover:border-slate-500' : '')}
+                          ${brewPhase === 'heating' ? 'animate-bounce shadow-[inset_0_0_20px_rgba(249,115,22,0.8)] border-orange-400' : ''}
                         `}
                         style={{ animationDelay: `${index * 0.15}s` }}
                       >
-                        {item ? item.emoji : <span className="text-slate-700 text-[10px] sm:text-sm z-10">{index + 1}</span>}
+                        {item ? item.emoji : <span className="text-slate-700 text-xs sm:text-base font-bold z-10">{index + 1}</span>}
                         {!item && isKnownSlot && (
-                          <div className="absolute inset-0 flex items-center justify-center opacity-30 text-xl sm:text-3xl">
+                          <div className="absolute inset-0 flex items-center justify-center opacity-30 text-2xl sm:text-4xl">
                             {correctItem.emoji}
                           </div>
                         )}
@@ -1084,9 +1081,9 @@ export default function PotionShopSim() {
                   })}
                 </div>
                 
-                <div className="w-full z-10 relative flex flex-col gap-2.5">
+                <div className="w-full z-10 relative flex flex-col gap-3">
                   <div className="text-center">
-                    <span className="text-[10px] sm:text-sm text-red-400 font-bold animate-pulse bg-red-900/30 px-3 py-1 rounded-full whitespace-nowrap">
+                    <span className="text-xs sm:text-sm text-red-400 font-bold animate-pulse bg-red-900/30 px-4 py-1.5 rounded-full whitespace-nowrap">
                       남은 기회: {currentCustomer?.maxAttempts - history.length}회
                     </span>
                   </div>
@@ -1094,56 +1091,56 @@ export default function PotionShopSim() {
                     onClick={handleBrew}
                     disabled={currentGuess.includes(null) || minigameResult !== null || brewPhase !== 'idle' || activeItemMode !== null || (tutorial.isActive && !tutorial.step.startsWith('brew_'))}
                     className={`
-                      w-full py-3 sm:py-4 font-extrabold rounded-xl transition-all shadow-lg flex items-center justify-center gap-2 sm:gap-3 text-sm sm:text-lg
-                      ${(brewPhase !== 'idle' || activeItemMode || (tutorial.isActive && !tutorial.step.startsWith('brew_'))) ? 'bg-slate-600 text-slate-400 cursor-not-allowed' : 'bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white hover:shadow-[0_0_15px_rgba(168,85,247,0.4)]'}
+                      w-full py-4 sm:py-5 font-extrabold rounded-2xl transition-all shadow-lg flex items-center justify-center gap-2 sm:gap-3 text-base sm:text-xl
+                      ${(brewPhase !== 'idle' || activeItemMode || (tutorial.isActive && !tutorial.step.startsWith('brew_'))) ? 'bg-slate-600 text-slate-400 cursor-not-allowed' : 'bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white hover:shadow-[0_0_20px_rgba(168,85,247,0.4)]'}
                       ${tutorial.isActive && tutorial.step.startsWith('brew_') ? 'ring-4 ring-indigo-400 animate-pulse' : ''}
                     `}
                   >
                     {brewPhase === 'idle' ? (
-                      <><Flame className="w-4 h-4 sm:w-6 sm:h-6 text-orange-400" /> 조합하기</>
+                      <><Flame className="w-5 h-5 sm:w-7 sm:h-7 text-orange-400" /> 조합하기</>
                     ) : (
-                      <><FlaskConical className="w-4 h-4 sm:w-6 sm:h-6 animate-spin" /> 연성 중...</>
+                      <><FlaskConical className="w-5 h-5 sm:w-7 sm:h-7 animate-spin" /> 연성 중...</>
                     )}
                   </button>
                 </div>
               </div>
             </div>
 
-            <div className="bg-slate-800 rounded-xl border border-slate-700 shadow-inner flex flex-col flex-1 min-h-[160px] overflow-hidden shrink-0 mt-1">
-              <div className="bg-slate-800/80 border-b border-slate-700 p-2 text-[10px] sm:text-xs text-slate-300 flex items-center gap-3 justify-center z-10 shrink-0">
-                <Info className="w-3 h-3 text-slate-400 shrink-0"/>
-                <span className="flex items-center gap-1">
-                  <Sparkles className="w-3 h-3 text-green-400"/> 
+            <div className="bg-slate-800 rounded-2xl border border-slate-700 shadow-inner flex flex-col flex-1 overflow-hidden shrink-0 min-h-[120px] sm:min-h-[180px]">
+              <div className="bg-slate-800/80 border-b border-slate-700 p-2.5 sm:p-3 text-xs sm:text-sm text-slate-300 flex items-center gap-3 justify-center z-10 shrink-0">
+                <Info className="w-4 h-4 text-slate-400 shrink-0"/>
+                <span className="flex items-center gap-1.5">
+                  <Sparkles className="w-4 h-4 text-green-400"/> 
                   <span className="text-green-400 font-bold whitespace-nowrap">완벽:</span> 종류/위치 일치
                 </span>
                 <span className="text-slate-600">|</span>
-                <span className="flex items-center gap-1">
-                  <AlertCircle className="w-3 h-3 text-yellow-400"/> 
+                <span className="flex items-center gap-1.5">
+                  <AlertCircle className="w-4 h-4 text-yellow-400"/> 
                   <span className="text-yellow-400 font-bold whitespace-nowrap">불안정:</span> 위치 다름
                 </span>
               </div>
 
               {history.length > 0 ? (
-                <div className="flex-1 overflow-y-auto custom-scrollbar relative pb-10">
-                  <div className="p-3 sm:p-5 space-y-2 sm:space-y-3">
+                <div className="flex-1 overflow-y-auto custom-scrollbar relative pb-12">
+                  <div className="p-3 sm:p-5 space-y-2.5 sm:space-y-4">
                     {history.map((record, idx) => (
-                      <div key={idx} className={`flex items-center justify-between p-3 sm:p-4 rounded-lg border transition-all ${idx === 0 ? 'bg-slate-700 border-purple-500 shadow-md' : 'bg-slate-900 border-slate-700 opacity-80'}`}>
-                        <div className="flex items-center gap-3 sm:gap-4">
-                          <span className="text-slate-400 w-4 sm:w-5 text-xs sm:text-base font-mono text-center font-bold">{record.attempt}.</span>
-                          <div className="flex flex-wrap gap-1 sm:gap-2">
+                      <div key={idx} className={`flex items-center justify-between p-3.5 sm:p-5 rounded-xl border transition-all ${idx === 0 ? 'bg-slate-700 border-purple-500 shadow-md' : 'bg-slate-900 border-slate-700 opacity-80'}`}>
+                        <div className="flex items-center gap-3 sm:gap-5">
+                          <span className="text-slate-400 w-5 sm:w-6 text-sm sm:text-lg font-mono text-center font-bold">{record.attempt}.</span>
+                          <div className="flex flex-wrap gap-1.5 sm:gap-2.5">
                             {record.guess.map((id, i) => (
-                              <div key={i} className="text-base sm:text-xl" title={getIngredientDetails(id).name}>
+                              <div key={i} className="text-xl sm:text-2xl" title={getIngredientDetails(id).name}>
                                 {getIngredientDetails(id).emoji}
                               </div>
                             ))}
                           </div>
                         </div>
-                        <div className="flex gap-1.5 sm:gap-2 text-[10px] sm:text-sm font-bold shrink-0">
-                          <div className={`flex items-center gap-0.5 sm:gap-1 px-2 py-1.5 sm:px-3 sm:py-2 rounded-md ${record.perfect > 0 ? 'bg-green-900/60 text-green-400' : 'bg-slate-800 text-slate-500'}`}>
-                            <Sparkles className="w-3 h-3 sm:w-4 sm:h-4" /> {record.perfect}
+                        <div className="flex gap-2 sm:gap-3 text-xs sm:text-sm font-bold shrink-0">
+                          <div className={`flex items-center gap-1 sm:gap-1.5 px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-lg ${record.perfect > 0 ? 'bg-green-900/60 text-green-400' : 'bg-slate-800 text-slate-500'}`}>
+                            <Sparkles className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> {record.perfect}
                           </div>
-                          <div className={`flex items-center gap-0.5 sm:gap-1 px-2 py-1.5 sm:px-3 sm:py-2 rounded-md ${record.unstable > 0 ? 'bg-yellow-900/60 text-yellow-400' : 'bg-slate-800 text-slate-500'}`}>
-                            <AlertCircle className="w-3 h-3 sm:w-4 sm:h-4" /> {record.unstable}
+                          <div className={`flex items-center gap-1 sm:gap-1.5 px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-lg ${record.unstable > 0 ? 'bg-yellow-900/60 text-yellow-400' : 'bg-slate-800 text-slate-500'}`}>
+                            <AlertCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> {record.unstable}
                           </div>
                         </div>
                       </div>
@@ -1151,7 +1148,7 @@ export default function PotionShopSim() {
                   </div>
                 </div>
               ) : (
-                <div className="flex-1 flex items-center justify-center text-slate-500 text-xs sm:text-sm p-4 text-center">
+                <div className="flex-1 flex items-center justify-center text-slate-500 text-sm sm:text-base p-4 text-center font-medium">
                   조합을 시작하면 여기에 기록이 표시됩니다.
                 </div>
               )}
