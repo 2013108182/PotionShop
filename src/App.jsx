@@ -6,10 +6,10 @@ import {
   ScrollText, CheckCircle2, XCircle, Info, Save
 } from 'lucide-react';
 
-// --- 데이터 정의 (재료 10종) ---
+// --- 데이터 정의 (재료 10종, 이모지 및 이름 개선) ---
 const INGREDIENTS = [
-  { id: '1', emoji: '🔴', name: '붉은 이슬', color: 'bg-red-100 border-red-300 text-red-700' },
-  { id: '2', emoji: '🔵', name: '푸른 깃털', color: 'bg-blue-100 border-blue-300 text-blue-700' },
+  { id: '1', emoji: '🌺', name: '적염화', color: 'bg-red-100 border-red-300 text-red-700' },
+  { id: '2', emoji: '💧', name: '정령의 눈물', color: 'bg-blue-100 border-blue-300 text-blue-700' },
   { id: '3', emoji: '🐉', name: '용의 비늘', color: 'bg-emerald-100 border-emerald-300 text-emerald-700' },
   { id: '4', emoji: '🧚', name: '요정 가루', color: 'bg-pink-100 border-pink-300 text-pink-700' },
   { id: '5', emoji: '🌊', name: '심해 소금', color: 'bg-cyan-100 border-cyan-300 text-cyan-700' },
@@ -131,13 +131,31 @@ const CUSTOMER_DATA = [
   }
 ];
 
+// 처방 다양성을 위해 모든 퀘스트를 1차원 배열로 풀어서 관리
+const ALL_QUESTS = [];
+CUSTOMER_DATA.forEach(customer => {
+  customer.quests.forEach(quest => {
+    ALL_QUESTS.push({
+      type: customer.type,
+      emoji: customer.emoji,
+      name: customer.name,
+      dialogue: quest.dialogue,
+      potionName: quest.potionName
+    });
+  });
+});
+
 const ITEM_COSTS = { hintIngredient: 5, hintSlot: 15 };
 const SAVE_KEY = 'potionShopSave';
+const TUTORIAL_KEY = 'potionShopTutorialV2';
 
 export default function PotionShopSim() {
   const [appState, setAppState] = useState('start');
   const [hasSaveData, setHasSaveData] = useState(false);
   const [saveIndicator, setSaveIndicator] = useState(false);
+
+  const [tutorial, setTutorial] = useState({ isActive: false, step: '' });
+  const [hasSeenTutorial, setHasSeenTutorial] = useState(false);
 
   const [day, setDay] = useState(1);
   const [money, setMoney] = useState(0);
@@ -163,27 +181,36 @@ export default function PotionShopSim() {
   const [minigameResult, setMinigameResult] = useState(null);
   const [selectedSlotIndex, setSelectedSlotIndex] = useState(null);
 
-  // 컴포넌트 마운트 시 세이브 데이터 확인
+  // 로컬 스토리지 초기화 (세이브 및 튜토리얼)
   useEffect(() => {
     const saved = localStorage.getItem(SAVE_KEY);
     if (saved) setHasSaveData(true);
+    const tut = localStorage.getItem(TUTORIAL_KEY);
+    if (tut === 'true') setHasSeenTutorial(true);
   }, []);
 
-  // 상태가 바뀔 때마다 자동 저장 (상점 화면, 하루 종료 화면일 때만)
+  // 자동 저장 로직
   useEffect(() => {
     if (appState === 'shop' || appState === 'day_end') {
-      const saveData = {
-        day, money, reputation, inventory, dailyCustomers, currentCustomerIndex
-      };
+      const saveData = { day, money, reputation, inventory, dailyCustomers, currentCustomerIndex };
       localStorage.setItem(SAVE_KEY, JSON.stringify(saveData));
       setHasSaveData(true);
       
-      // 저장 알림 UI 트리거
       setSaveIndicator(true);
       const timer = setTimeout(() => setSaveIndicator(false), 2000);
       return () => clearTimeout(timer);
     }
   }, [appState, day, money, reputation, inventory, dailyCustomers, currentCustomerIndex]);
+
+  // 튜토리얼 자동 진행 로직 (재료 채우면 자동으로 다음 스텝)
+  useEffect(() => {
+    if (tutorial.isActive) {
+      const guessStr = currentGuess.join('');
+      if (tutorial.step === 'guess_1' && guessStr === '132') setTutorial(p => ({...p, step: 'brew_1'}));
+      if (tutorial.step === 'guess_2' && guessStr === '456') setTutorial(p => ({...p, step: 'brew_2'}));
+      if (tutorial.step === 'guess_3' && guessStr === '123') setTutorial(p => ({...p, step: 'brew_3'}));
+    }
+  }, [currentGuess, tutorial.isActive, tutorial.step]);
 
   const loadGame = () => {
     const saved = localStorage.getItem(SAVE_KEY);
@@ -200,9 +227,7 @@ export default function PotionShopSim() {
   };
 
   const startGame = () => {
-    if (hasSaveData && !window.confirm('기존 저장 데이터가 지워집니다. 정말 새로 시작하시겠습니까?')) {
-      return;
-    }
+    if (hasSaveData && !window.confirm('기존 저장 데이터가 지워집니다. 정말 새로 시작하시겠습니까?')) return;
     setDay(1);
     setMoney(50);
     setReputation(50);
@@ -219,39 +244,58 @@ export default function PotionShopSim() {
     if (currentDay >= 3) maxSlotsAllowed = 4;
     if (currentDay >= 5) maxSlotsAllowed = 5;
 
-    for(let i=0; i < (customersCount > 5 ? 5 : customersCount); i++) {
-      const availableCustomers = CUSTOMER_DATA.map(customer => {
-        const validQuests = customer.quests.filter(quest => POTION_DB[quest.potionName].slots <= maxSlotsAllowed);
-        return { ...customer, validQuests };
-      }).filter(c => c.validQuests.length > 0 && c.type !== lastType);
-
-      let pool = availableCustomers;
-      if (pool.length === 0) {
-        pool = CUSTOMER_DATA.map(customer => {
-          const validQuests = customer.quests.filter(quest => POTION_DB[quest.potionName].slots <= maxSlotsAllowed);
-          return { ...customer, validQuests };
-        }).filter(c => c.validQuests.length > 0);
-      }
-
-      const randomCustomer = pool[Math.floor(Math.random() * pool.length)];
-      lastType = randomCustomer.type;
-
-      const randomQuest = randomCustomer.validQuests[Math.floor(Math.random() * randomCustomer.validQuests.length)];
-      const potionInfo = POTION_DB[randomQuest.potionName];
-      const prescriptionCode = '#' + Math.random().toString(36).substring(2, 6).toUpperCase();
-      
+    // 튜토리얼 강제 큐 (1일차 첫 시작)
+    if (!hasSeenTutorial && currentDay === 1) {
+      setTutorial({ isActive: true, step: 'start_prescription' });
+      const villagerQuest = ALL_QUESTS.find(q => q.potionName === '깊은 밤의 숙면 물약');
       queue.push({
-        id: i,
-        type: randomCustomer.type,
-        emoji: randomCustomer.emoji,
-        name: randomCustomer.name,
-        dialogue: randomQuest.dialogue,
-        potionName: randomQuest.potionName,
-        slots: potionInfo.slots,
-        maxAttempts: potionInfo.maxAttempts,
-        baseReward: potionInfo.baseReward,
-        prescriptionCode
+        id: 0,
+        type: villagerQuest.type,
+        emoji: villagerQuest.emoji,
+        name: villagerQuest.name,
+        dialogue: villagerQuest.dialogue,
+        potionName: villagerQuest.potionName,
+        slots: 3,
+        maxAttempts: 8,
+        baseReward: 35,
+        prescriptionCode: '#TUT0'
       });
+      // 나머지 큐는 1개만 더 추가
+      const extraQuest = ALL_QUESTS.find(q => q.type !== 'villager' && q.potionName !== '깊은 밤의 숙면 물약' && POTION_DB[q.potionName].slots <= 3);
+      queue.push({...extraQuest, id: 1, slots: 3, maxAttempts: 8, baseReward: 35, prescriptionCode: '#TEST'});
+    } else {
+      // 일반 큐 (처방 다양화 로직 반영)
+      let availableQuests = ALL_QUESTS.filter(q => POTION_DB[q.potionName].slots <= maxSlotsAllowed)
+                                      .sort(() => Math.random() - 0.5);
+      
+      const usedTypes = new Set([lastType]);
+      const usedPotions = new Set();
+
+      for(let i=0; i < (customersCount > 5 ? 5 : customersCount); i++) {
+        let quest = availableQuests.find(q => !usedTypes.has(q.type) && !usedPotions.has(q.potionName));
+        if (!quest) quest = availableQuests.find(q => !usedPotions.has(q.potionName));
+        if (!quest) quest = availableQuests[0]; // 최후 수단
+
+        if (quest) {
+          usedTypes.add(quest.type);
+          usedPotions.add(quest.potionName);
+          availableQuests = availableQuests.filter(q => q !== quest);
+
+          const potionInfo = POTION_DB[quest.potionName];
+          queue.push({
+            id: i,
+            type: quest.type,
+            emoji: quest.emoji,
+            name: quest.name,
+            dialogue: quest.dialogue,
+            potionName: quest.potionName,
+            slots: potionInfo.slots,
+            maxAttempts: potionInfo.maxAttempts,
+            baseReward: potionInfo.baseReward,
+            prescriptionCode: '#' + Math.random().toString(36).substring(2, 6).toUpperCase()
+          });
+        }
+      }
     }
 
     setDailyCustomers(queue);
@@ -289,14 +333,11 @@ export default function PotionShopSim() {
   const handleDiagnose = (selectedPotion) => {
     if (selectedPotion === currentCustomer.potionName) {
       setDiagnosisFeedback('success');
-      setTimeout(() => {
-        acceptOrder();
-      }, 1200);
+      setTimeout(() => { acceptOrder(); }, 1200);
     } else {
       setDiagnosisFeedback('fail');
       const penalty = 10;
       setReputation(prev => prev - penalty);
-      
       setTimeout(() => {
         if (reputation - penalty <= 0) {
           setAppState('game_over');
@@ -311,24 +352,52 @@ export default function PotionShopSim() {
 
   const acceptOrder = () => {
     const slotsCount = currentCustomer.slots;
-    const shuffled = [...INGREDIENTS].sort(() => 0.5 - Math.random());
-    setSecretRecipe(shuffled.slice(0, slotsCount).map(item => item.id));
+    
+    if (tutorial.isActive) {
+      setSecretRecipe(['1', '2', '3']);
+      setTutorial(p => ({...p, step: 'guess_1'}));
+    } else {
+      const shuffled = [...INGREDIENTS].sort(() => 0.5 - Math.random());
+      setSecretRecipe(shuffled.slice(0, slotsCount).map(item => item.id));
+    }
+    
     setCurrentGuess(Array(slotsCount).fill(null));
     setHistory([]);
     setBrewPhase('idle');
     setEffectText('');
     setMinigameResult(null);
     setSelectedSlotIndex(null);
-    
     setActiveItemMode(null);
     setKnownIngredients({});
     setKnownSlots(Array(slotsCount).fill(null));
-    
     setAppState('minigame');
+  };
+
+  const getTutorialAllowedIngredient = () => {
+    if (!tutorial.isActive) return null;
+    let target = [];
+    if (tutorial.step === 'guess_1') target = ['1', '3', '2'];
+    else if (tutorial.step === 'guess_2') target = ['4', '5', '6'];
+    else if (tutorial.step === 'guess_3') target = ['1', '2', '3'];
+    else return null;
+
+    const emptyIndex = currentGuess.indexOf(null);
+    if (emptyIndex !== -1) return target[emptyIndex];
+    return null;
   };
 
   const handleIngredientClick = (id) => {
     if (minigameResult || brewPhase !== 'idle') return;
+
+    if (tutorial.isActive) {
+      if (tutorial.step.startsWith('guess_')) {
+        const allowed = getTutorialAllowedIngredient();
+        if (allowed && id !== allowed) return;
+        if (currentGuess.includes(id)) return; // 튜토리얼 중 재료 빼기 방지
+      } else {
+        return; // 튜토리얼 중 다른 버튼 클릭 방지
+      }
+    }
 
     if (activeItemMode === 'hintIngredient') {
       if (knownIngredients[id] !== undefined) return;
@@ -354,7 +423,7 @@ export default function PotionShopSim() {
   };
 
   const handleSlotClick = (index, guessId) => {
-    if (minigameResult || brewPhase !== 'idle') return;
+    if (minigameResult || brewPhase !== 'idle' || tutorial.isActive) return;
 
     if (activeItemMode === 'hintSlot') {
       if (knownSlots[index]) return;
@@ -410,6 +479,14 @@ export default function PotionShopSim() {
         } else if (newHistory.length >= currentCustomer.maxAttempts) {
           finishOrder(false, newHistory.length);
         }
+
+        // 튜토리얼 스텝 진행
+        if (tutorial.isActive) {
+          if (tutorial.step === 'brew_1') setTutorial(p => ({...p, step: 'explain_1'}));
+          else if (tutorial.step === 'brew_2') setTutorial(p => ({...p, step: 'explain_2'}));
+          else if (tutorial.step === 'brew_3') setTutorial(p => ({...p, step: 'finish'}));
+        }
+
       }, 1500);
     }, 1200);
   };
@@ -430,17 +507,16 @@ export default function PotionShopSim() {
       earnedRep = -15;
     }
 
-    setMinigameResult({
-      status: isWin ? 'win' : 'lose',
-      baseReward: base,
-      tip: tip,
-      earnedMoney,
-      earnedRep,
-      attempts
-    });
+    setMinigameResult({ status: isWin ? 'win' : 'lose', baseReward: base, tip, earnedMoney, earnedRep, attempts });
   };
 
   const returnToShop = () => {
+    if (tutorial.isActive) {
+      setTutorial({ isActive: false, step: '' });
+      setHasSeenTutorial(true);
+      localStorage.setItem(TUTORIAL_KEY, 'true');
+    }
+    
     const newReputation = reputation + minigameResult.earnedRep;
     setMoney(prev => prev + minigameResult.earnedMoney);
     setReputation(newReputation);
@@ -456,12 +532,27 @@ export default function PotionShopSim() {
 
   const getIngredientDetails = (id) => INGREDIENTS.find(item => item.id === id);
 
+  const getTutorialMessage = () => {
+    switch (tutorial.step) {
+      case 'start_prescription': return "마법약 상점에 오신 것을 환영합니다!\n첫 손님이 증상을 이야기하고 있네요.\n아래의 [처방전 작성하기] 버튼을 눌러보세요.";
+      case 'pick_potion': return "잠을 푹 자고 싶어 하는군요.\n목록에서 [깊은 밤의 숙면 물약]을 선택하세요.";
+      case 'guess_1': return "조제실입니다! 튜토리얼을 위해 지시하는 재료를 넣어보세요.\n[적염화(🌺)], [용의 비늘(🐉)], [정령의 눈물(💧)] 순서대로 클릭하세요.";
+      case 'brew_1': return "좋습니다! 이제 가마솥 아래의 [조합하기] 버튼을 눌러 결과를 확인해보세요.";
+      case 'explain_1': return "결과가 나왔습니다! [완벽 1, 불안정 2]군요.\n\n✨ 완벽: 종류와 위치가 모두 일치\n⚠️ 불안정: 종류는 맞지만 위치가 틀림\n\n1, 2, 3번 재료가 모두 정답에 포함된다는 뜻입니다!";
+      case 'guess_2': return "이번엔 전혀 다른 재료를 넣어볼까요?\n[요정 가루(🧚)], [심해 소금(🌊)], [유니콘 뿔(🦄)]을 순서대로 클릭하세요.";
+      case 'brew_2': return "다시 [조합하기] 버튼을 눌러보세요.";
+      case 'explain_2': return "결과 [완벽 0, 불안정 0]이 나왔습니다!\n\n이건 4, 5, 6번 재료가 정답에 전혀 쓰이지 않는다는 뜻입니다. 확실한 오답을 걸러내는 것도 중요합니다!";
+      case 'guess_3': return "이제 정답을 맞혀봅시다!\n처음에 1, 2, 3이 정답 재료임을 알아냈죠?\n위치를 바꿔서 [적염화(🌺)], [정령의 눈물(💧)], [용의 비늘(🐉)] 순서로 넣어보세요.";
+      case 'brew_3': return "마지막으로 [조합하기] 버튼을 누르세요!";
+      default: return "";
+    }
+  };
+
   const renderTopBar = () => (
     <div className="flex items-center justify-between bg-slate-800 p-3 sm:p-4 rounded-xl border border-slate-700 shadow-md mb-4 sm:mb-6 relative z-20">
       <div className="flex items-center gap-2 text-purple-300 font-bold text-lg sm:text-xl relative">
         <Store className="w-5 h-5 sm:w-6 sm:h-6" />
         <span>Day {day}</span>
-        {/* 자동 저장 알림 UI */}
         {saveIndicator && (
           <div className="absolute -top-3 left-0 bg-green-900/80 text-green-300 text-[10px] px-2 py-0.5 rounded-full flex items-center gap-1 animate-pulse border border-green-500 whitespace-nowrap">
             <Save className="w-3 h-3"/> 자동 저장됨
@@ -561,43 +652,41 @@ export default function PotionShopSim() {
   return (
     <div className="min-h-[100dvh] bg-slate-900 text-slate-100 p-2 sm:p-4 font-sans selection:bg-purple-500/30 flex flex-col">
       <style>{`
-        @keyframes shake {
-          0%, 100% { transform: translateX(0) rotate(0deg); }
-          25% { transform: translateX(-4px) rotate(-2deg); }
-          50% { transform: translateX(4px) rotate(2deg); }
-          75% { transform: translateX(-4px) rotate(-1deg); }
-        }
+        @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-4px); } 50% { transform: translateX(4px); } 75% { transform: translateX(-4px); } }
         .animate-shake { animation: shake 0.3s ease-in-out infinite; }
-        @keyframes pulse-fast {
-          0%, 100% { opacity: 1; transform: scale(1); }
-          50% { opacity: 0.8; transform: scale(1.02); }
-        }
+        @keyframes pulse-fast { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.8; transform: scale(1.02); } }
         .animate-pulse-fast { animation: pulse-fast 0.4s ease-in-out infinite; }
-        @keyframes walkIn {
-          0% { transform: translateX(100%); opacity: 0; }
-          100% { transform: translateX(0); opacity: 1; }
-        }
+        @keyframes walkIn { 0% { transform: translateX(100%); opacity: 0; } 100% { transform: translateX(0); opacity: 1; } }
         .animate-walk-in { animation: walkIn 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; }
-        @keyframes popUp {
-          0% { transform: scale(0.8); opacity: 0; }
-          100% { transform: scale(1); opacity: 1; }
-        }
+        @keyframes popUp { 0% { transform: scale(0.8); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
         .animate-pop-up { animation: popUp 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; animation-delay: 0.6s; opacity: 0; }
         .animate-fade-in-btn { animation: popUp 0.3s ease-in forwards; animation-delay: 1.0s; opacity: 0; }
-        @keyframes pulse-glow {
-          0%, 100% { box-shadow: 0 0 15px rgba(59, 130, 246, 0.5); border-color: rgba(59, 130, 246, 0.8); }
-          50% { box-shadow: 0 0 25px rgba(59, 130, 246, 0.8); border-color: rgba(96, 165, 250, 1); }
-        }
+        @keyframes pulse-glow { 0%, 100% { box-shadow: 0 0 15px rgba(59,130,246,0.5); border-color: rgba(59,130,246,0.8); } 50% { box-shadow: 0 0 25px rgba(59,130,246,0.8); border-color: rgba(96,165,250,1); } }
         .animate-pulse-glow { animation: pulse-glow 1.5s ease-in-out infinite; }
-        @keyframes slideUp {
-          0% { transform: translateY(100%); opacity: 0; }
-          100% { transform: translateY(0); opacity: 1; }
-        }
+        @keyframes slideUp { 0% { transform: translateY(100%); opacity: 0; } 100% { transform: translateY(0); opacity: 1; } }
         .animate-slide-up { animation: slideUp 0.4s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; }
-        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #475569; border-radius: 10px; }
       `}</style>
+
+      {tutorial.isActive && tutorial.step !== 'finish' && (
+        <div className="fixed top-4 sm:top-10 left-1/2 -translate-x-1/2 w-[95%] max-w-md bg-indigo-950/95 border-2 border-indigo-400 p-4 sm:p-6 rounded-2xl z-[100] shadow-[0_0_30px_rgba(99,102,241,0.5)] animate-in slide-in-from-top-4 backdrop-blur-sm">
+          <h3 className="text-indigo-300 font-black mb-2 flex items-center gap-2 text-sm sm:text-base"><Info className="w-5 h-5"/> 튜토리얼 안내</h3>
+          <p className="text-white text-sm sm:text-base leading-relaxed whitespace-pre-wrap">{getTutorialMessage()}</p>
+          {(tutorial.step === 'explain_1' || tutorial.step === 'explain_2') && (
+            <button 
+              onClick={() => {
+                if (tutorial.step === 'explain_1') setTutorial(p => ({...p, step: 'guess_2'}));
+                if (tutorial.step === 'explain_2') setTutorial(p => ({...p, step: 'guess_3'}));
+              }}
+              className="mt-4 w-full py-3 bg-indigo-600 hover:bg-indigo-500 rounded-xl font-bold text-white transition-all shadow-lg"
+            >
+              다음으로
+            </button>
+          )}
+        </div>
+      )}
 
       <div className="max-w-2xl mx-auto w-full relative overflow-hidden pb-2 sm:pb-4 flex-1 flex flex-col">
         {renderTopBar()}
@@ -704,8 +793,8 @@ export default function PotionShopSim() {
                 <div className="h-20 sm:h-32 flex items-center justify-center px-4">
                   <button 
                     onClick={() => setIsDiagnosing(true)}
-                    disabled={diagnosisFeedback !== null}
-                    className="w-full sm:w-auto px-4 py-3 sm:px-8 sm:py-4 bg-indigo-600 hover:bg-indigo-500 text-white font-black text-sm sm:text-xl rounded-xl shadow-[0_6px_0_rgba(67,56,202,1)] sm:shadow-[0_8px_0_rgba(67,56,202,1)] hover:translate-y-[2px] transition-all flex items-center justify-center gap-2 sm:gap-3 animate-fade-in-btn disabled:opacity-50 disabled:cursor-not-allowed"
+                    disabled={diagnosisFeedback !== null || (tutorial.isActive && tutorial.step !== 'start_prescription')}
+                    className={`w-full sm:w-auto px-4 py-3 sm:px-8 sm:py-4 hover:bg-indigo-500 text-white font-black text-sm sm:text-xl rounded-xl shadow-[0_6px_0_rgba(67,56,202,1)] sm:shadow-[0_8px_0_rgba(67,56,202,1)] hover:translate-y-[2px] transition-all flex items-center justify-center gap-2 sm:gap-3 animate-fade-in-btn disabled:opacity-50 disabled:cursor-not-allowed ${tutorial.isActive && tutorial.step === 'start_prescription' ? 'bg-indigo-500 animate-pulse ring-4 ring-indigo-400' : 'bg-indigo-600'}`}
                   >
                     <ScrollText className="w-4 h-4 sm:w-6 sm:h-6" /> 처방전 작성하기
                   </button>
@@ -719,17 +808,25 @@ export default function PotionShopSim() {
                     </button>
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 sm:gap-2">
-                    {POTION_CATALOG.map((potionName, idx) => (
-                      <button
-                        key={idx}
-                        onClick={() => handleDiagnose(potionName)}
-                        disabled={diagnosisFeedback !== null}
-                        className="p-2 sm:p-3 bg-slate-700 hover:bg-indigo-600 text-left rounded-lg sm:rounded-xl text-[11px] sm:text-sm font-semibold text-slate-200 hover:text-white border border-slate-600 hover:border-indigo-400 transition-colors flex items-center gap-2"
-                      >
-                        <FlaskConical className="w-3 h-3 sm:w-4 sm:h-4 opacity-70 shrink-0" />
-                        <span className="truncate">{potionName}</span>
-                      </button>
-                    ))}
+                    {POTION_CATALOG.map((potionName, idx) => {
+                      const isTutorialTarget = tutorial.isActive && potionName === '깊은 밤의 숙면 물약';
+                      const isTutorialDisabled = tutorial.isActive && potionName !== '깊은 밤의 숙면 물약';
+                      return (
+                        <button
+                          key={idx}
+                          onClick={() => handleDiagnose(potionName)}
+                          disabled={diagnosisFeedback !== null || isTutorialDisabled}
+                          className={`p-2 sm:p-3 text-left rounded-lg sm:rounded-xl text-[11px] sm:text-sm font-semibold transition-colors flex items-center gap-2 border ${
+                            isTutorialTarget ? 'bg-indigo-600 text-white border-indigo-400 animate-pulse ring-2 ring-indigo-500' : 
+                            isTutorialDisabled ? 'bg-slate-800 text-slate-600 border-slate-700 cursor-not-allowed' :
+                            'bg-slate-700 hover:bg-indigo-600 text-slate-200 hover:text-white border-slate-600 hover:border-indigo-400'
+                          }`}
+                        >
+                          <FlaskConical className="w-3 h-3 sm:w-4 sm:h-4 opacity-70 shrink-0" />
+                          <span className="truncate">{potionName}</span>
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
               )}
@@ -738,25 +835,29 @@ export default function PotionShopSim() {
         )}
 
         {appState === 'minigame' && (
-          <div className="flex flex-col flex-1 gap-2 sm:gap-4 overflow-y-auto custom-scrollbar">
+          <div className="flex flex-col flex-1 gap-2 sm:gap-4 h-full relative">
             
             {minigameResult && (
-              <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+              <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
                 <div className={`bg-slate-800 border-2 rounded-2xl p-6 sm:p-8 max-w-sm w-full text-center space-y-4 sm:space-y-6 animate-in zoom-in-95 ${minigameResult.status === 'win' ? 'border-green-500 shadow-[0_0_40px_rgba(34,197,94,0.3)]' : 'border-red-500 shadow-[0_0_40px_rgba(239,68,68,0.3)]'}`}>
                   <div className="text-5xl sm:text-6xl mb-2">{minigameResult.status === 'win' ? '🎇' : '💥'}</div>
                   <h2 className={`text-xl sm:text-2xl font-bold ${minigameResult.status === 'win' ? 'text-green-400' : 'text-red-400'}`}>
                     {minigameResult.status === 'win' ? '완벽한 조제!' : '조제 실패...'}
                   </h2>
                   
-                  {minigameResult.status === 'win' && (
-                    <p className="text-sm sm:text-base text-slate-300">
-                      남은 기회에 비례하여<br/>추가 팁을 받았습니다!
-                    </p>
-                  )}
-                  {minigameResult.status === 'lose' && (
-                    <p className="text-sm sm:text-base text-slate-300">
-                      가마솥이 폭발하여 손님이 화를 내며 나갔습니다.
-                    </p>
+                  {tutorial.isActive && minigameResult.status === 'win' ? (
+                    <div className="bg-indigo-900/50 border border-indigo-500 p-3 rounded-lg mt-2 text-indigo-200 text-sm break-keep">
+                      튜토리얼을 훌륭하게 완수했습니다!<br/>이제 진짜 상점 운영을 시작해보세요.
+                    </div>
+                  ) : (
+                    <>
+                      {minigameResult.status === 'win' && (
+                        <p className="text-sm sm:text-base text-slate-300">남은 기회에 비례하여<br/>추가 팁을 받았습니다!</p>
+                      )}
+                      {minigameResult.status === 'lose' && (
+                        <p className="text-sm sm:text-base text-slate-300">가마솥이 폭발하여 손님이 화를 내며 나갔습니다.</p>
+                      )}
+                    </>
                   )}
 
                   <div className="flex justify-center gap-4 sm:gap-6 py-3 sm:py-4 bg-slate-900 rounded-xl">
@@ -764,9 +865,7 @@ export default function PotionShopSim() {
                       <p className="text-xs sm:text-sm text-slate-400 mb-1">획득 골드</p>
                       <p className={`font-bold text-base sm:text-lg flex flex-col items-center justify-center ${minigameResult.earnedMoney > 0 ? 'text-yellow-400' : 'text-slate-500'}`}>
                         <span className="flex items-center gap-1">{minigameResult.earnedMoney > 0 ? '+' : ''}{minigameResult.earnedMoney} <Coins className="w-3 h-3 sm:w-4 sm:h-4"/></span>
-                        {minigameResult.tip > 0 && (
-                          <span className="text-[10px] sm:text-xs text-yellow-600/80 mt-1">(기본 {minigameResult.baseReward} + 팁 {minigameResult.tip})</span>
-                        )}
+                        {minigameResult.tip > 0 && <span className="text-[10px] sm:text-xs text-yellow-600/80 mt-1">(기본 {minigameResult.baseReward} + 팁 {minigameResult.tip})</span>}
                       </p>
                     </div>
                     <div className="text-center flex flex-col justify-start border-l border-slate-700 pl-4 sm:pl-6">
@@ -813,11 +912,11 @@ export default function PotionShopSim() {
               <div className="flex gap-1.5 sm:gap-2 w-full sm:w-auto ml-auto">
                 <button 
                   onClick={() => setActiveItemMode(activeItemMode === 'hintIngredient' ? null : 'hintIngredient')}
-                  disabled={inventory.hintIngredient <= 0 || brewPhase !== 'idle'}
+                  disabled={inventory.hintIngredient <= 0 || brewPhase !== 'idle' || tutorial.isActive}
                   className={`flex-1 sm:flex-none flex items-center justify-center gap-1 sm:gap-2 px-2 py-1.5 sm:px-3 sm:py-2 rounded-lg text-xs sm:text-sm font-bold transition-all ${
                     activeItemMode === 'hintIngredient' 
                       ? 'bg-indigo-600 text-white shadow-[0_0_15px_rgba(79,70,229,0.8)]' 
-                      : inventory.hintIngredient > 0 ? 'bg-slate-700 hover:bg-slate-600 text-indigo-300' : 'bg-slate-900 text-slate-600 cursor-not-allowed'
+                      : inventory.hintIngredient > 0 && !tutorial.isActive ? 'bg-slate-700 hover:bg-slate-600 text-indigo-300' : 'bg-slate-900 text-slate-600 cursor-not-allowed'
                   }`}
                 >
                   <Search className="w-3 h-3 sm:w-4 sm:h-4" /> 돋보기 ({inventory.hintIngredient})
@@ -825,11 +924,11 @@ export default function PotionShopSim() {
 
                 <button 
                   onClick={() => setActiveItemMode(activeItemMode === 'hintSlot' ? null : 'hintSlot')}
-                  disabled={inventory.hintSlot <= 0 || brewPhase !== 'idle'}
+                  disabled={inventory.hintSlot <= 0 || brewPhase !== 'idle' || tutorial.isActive}
                   className={`flex-1 sm:flex-none flex items-center justify-center gap-1 sm:gap-2 px-2 py-1.5 sm:px-3 sm:py-2 rounded-lg text-xs sm:text-sm font-bold transition-all ${
                     activeItemMode === 'hintSlot' 
                       ? 'bg-purple-600 text-white shadow-[0_0_15px_rgba(147,51,234,0.8)]' 
-                      : inventory.hintSlot > 0 ? 'bg-slate-700 hover:bg-slate-600 text-purple-300' : 'bg-slate-900 text-slate-600 cursor-not-allowed'
+                      : inventory.hintSlot > 0 && !tutorial.isActive ? 'bg-slate-700 hover:bg-slate-600 text-purple-300' : 'bg-slate-900 text-slate-600 cursor-not-allowed'
                   }`}
                 >
                   <Eye className="w-3 h-3 sm:w-4 sm:h-4" /> 구슬 ({inventory.hintSlot})
@@ -837,7 +936,8 @@ export default function PotionShopSim() {
 
                 <button 
                   onClick={() => setShowShopModal(true)}
-                  className="flex-1 sm:flex-none flex items-center justify-center gap-1 px-2 py-1.5 sm:px-3 sm:py-2 bg-blue-900/80 hover:bg-blue-800 text-blue-200 border border-blue-500 rounded-lg text-xs sm:text-sm font-bold shadow-lg transition-colors whitespace-nowrap"
+                  disabled={tutorial.isActive}
+                  className={`flex-1 sm:flex-none flex items-center justify-center gap-1 px-2 py-1.5 sm:px-3 sm:py-2 rounded-lg text-xs sm:text-sm font-bold transition-colors whitespace-nowrap ${tutorial.isActive ? 'bg-slate-900 text-slate-600 cursor-not-allowed' : 'bg-blue-900/80 hover:bg-blue-800 text-blue-200 border border-blue-500 shadow-lg'}`}
                 >
                   <ShoppingBag className="w-3 h-3 sm:w-4 sm:h-4" /> 상점
                 </button>
@@ -845,7 +945,6 @@ export default function PotionShopSim() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-2 sm:gap-6 shrink-0">
-              
               <div className={`bg-slate-800 p-3 sm:p-4 rounded-xl border transition-all ${activeItemMode === 'hintIngredient' ? 'animate-pulse-glow' : 'border-slate-700'}`}>
                 <div className="flex justify-between items-center mb-2 sm:mb-4">
                   <h3 className="text-sm sm:text-lg font-semibold text-slate-200">재료 선반</h3>
@@ -855,17 +954,21 @@ export default function PotionShopSim() {
                     const isSelected = currentGuess.includes(item.id);
                     const isKnown = knownIngredients[item.id] !== undefined;
                     const isItemTarget = activeItemMode === 'hintIngredient' && !isKnown;
+                    const tutAllowedId = getTutorialAllowedIngredient();
+                    const isTutTarget = tutorial.isActive && tutAllowedId === item.id;
+                    const isTutDisabled = tutorial.isActive && tutAllowedId !== item.id && !isSelected;
 
                     return (
                       <button
                         key={item.id}
                         onClick={() => handleIngredientClick(item.id)}
-                        disabled={minigameResult !== null || brewPhase !== 'idle' || (!isItemTarget && !isSelected && !currentGuess.includes(null)) || (activeItemMode === 'hintIngredient' && isKnown)}
+                        disabled={minigameResult !== null || brewPhase !== 'idle' || (!isItemTarget && !isSelected && !currentGuess.includes(null)) || (activeItemMode === 'hintIngredient' && isKnown) || isTutDisabled}
                         className={`
                           relative p-1.5 sm:p-2 rounded-lg sm:rounded-xl flex flex-col items-center justify-center transition-all duration-300 border-2
                           ${isSelected && !activeItemMode ? 'bg-slate-700 border-purple-500 shadow-[0_0_10px_rgba(168,85,247,0.5)] transform scale-105' : 'bg-slate-900 border-slate-700'}
                           ${isItemTarget ? 'hover:border-indigo-400 hover:shadow-[0_0_10px_rgba(99,102,241,0.5)] cursor-crosshair' : ''}
-                          ${(!activeItemMode && !isSelected && !currentGuess.includes(null)) ? 'opacity-50 cursor-not-allowed' : 'hover:-translate-y-1'}
+                          ${(!activeItemMode && !isSelected && !currentGuess.includes(null)) || isTutDisabled ? 'opacity-50 cursor-not-allowed' : 'hover:-translate-y-1'}
+                          ${isTutTarget ? 'ring-4 ring-indigo-400 animate-pulse border-indigo-400 bg-indigo-900/30' : ''}
                         `}
                       >
                         <span className="text-xl sm:text-2xl mb-0.5 sm:mb-1">{item.emoji}</span>
@@ -915,14 +1018,13 @@ export default function PotionShopSim() {
                         className={`
                           relative w-10 h-10 sm:w-14 sm:h-14 md:w-16 md:h-16 shrink-0 rounded-full border-2 flex items-center justify-center text-lg sm:text-3xl transition-all duration-300
                           ${item ? 'bg-slate-800 border-purple-400 shadow-[inset_0_0_10px_rgba(168,85,247,0.4)]' : 'bg-slate-900 border-slate-700 border-dashed'}
-                          ${isItemTarget ? 'cursor-crosshair hover:border-purple-400 hover:shadow-[0_0_10px_rgba(168,85,247,0.5)]' : (item && !activeItemMode ? 'cursor-pointer' : '')}
-                          ${isSelectedEmptySlot ? 'border-blue-400 shadow-[0_0_10px_rgba(96,165,250,0.6)] animate-pulse cursor-pointer' : (!item && !activeItemMode ? 'cursor-pointer hover:border-slate-500' : '')}
+                          ${isItemTarget ? 'cursor-crosshair hover:border-purple-400 hover:shadow-[0_0_10px_rgba(168,85,247,0.5)]' : (item && !activeItemMode && !tutorial.isActive ? 'cursor-pointer' : '')}
+                          ${isSelectedEmptySlot && !tutorial.isActive ? 'border-blue-400 shadow-[0_0_10px_rgba(96,165,250,0.6)] animate-pulse cursor-pointer' : (!item && !activeItemMode && !tutorial.isActive ? 'cursor-pointer hover:border-slate-500' : '')}
                           ${brewPhase === 'heating' ? 'animate-bounce shadow-[inset_0_0_15px_rgba(249,115,22,0.8)] border-orange-400' : ''}
                         `}
                         style={{ animationDelay: `${index * 0.15}s` }}
                       >
                         {item ? item.emoji : <span className="text-slate-700 text-[10px] sm:text-sm z-10">{index + 1}</span>}
-                        
                         {!item && isKnownSlot && (
                           <div className="absolute inset-0 flex items-center justify-center opacity-30 text-xl sm:text-3xl">
                             {correctItem.emoji}
@@ -935,10 +1037,11 @@ export default function PotionShopSim() {
                 
                 <button
                   onClick={handleBrew}
-                  disabled={currentGuess.includes(null) || minigameResult !== null || brewPhase !== 'idle' || activeItemMode !== null}
+                  disabled={currentGuess.includes(null) || minigameResult !== null || brewPhase !== 'idle' || activeItemMode !== null || (tutorial.isActive && !tutorial.step.startsWith('brew_'))}
                   className={`
                     w-full py-3 sm:py-4 font-extrabold rounded-xl transition-all shadow-lg flex items-center justify-center gap-2 sm:gap-3 text-sm sm:text-lg z-10 relative
-                    ${(brewPhase !== 'idle' || activeItemMode) ? 'bg-slate-600 text-slate-400 cursor-not-allowed' : 'bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white hover:shadow-[0_0_15px_rgba(168,85,247,0.4)]'}
+                    ${(brewPhase !== 'idle' || activeItemMode || (tutorial.isActive && !tutorial.step.startsWith('brew_'))) ? 'bg-slate-600 text-slate-400 cursor-not-allowed' : 'bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white hover:shadow-[0_0_15px_rgba(168,85,247,0.4)]'}
+                    ${tutorial.isActive && tutorial.step.startsWith('brew_') ? 'ring-4 ring-indigo-400 animate-pulse' : ''}
                   `}
                 >
                   {brewPhase === 'idle' ? (
@@ -950,8 +1053,8 @@ export default function PotionShopSim() {
               </div>
             </div>
 
-            <div className="bg-slate-800 rounded-xl border border-slate-700 shadow-inner flex flex-col h-48 sm:h-64 shrink-0 overflow-hidden">
-              <div className="bg-slate-800/80 border-b border-slate-700 p-2 rounded-t-xl text-[10px] sm:text-xs text-slate-300 flex items-center gap-3 justify-center z-10 shrink-0">
+            <div className="bg-slate-800 rounded-xl border border-slate-700 shadow-inner flex flex-col flex-1 min-h-[160px] overflow-hidden shrink-0 mt-1">
+              <div className="bg-slate-800/80 border-b border-slate-700 p-2 text-[10px] sm:text-xs text-slate-300 flex items-center gap-3 justify-center z-10 shrink-0">
                 <Info className="w-3 h-3 text-slate-400 shrink-0"/>
                 <span className="flex items-center gap-1">
                   <Sparkles className="w-3 h-3 text-green-400"/> 
@@ -965,29 +1068,31 @@ export default function PotionShopSim() {
               </div>
 
               {history.length > 0 ? (
-                <div className="p-3 sm:p-5 space-y-2 sm:space-y-3 overflow-y-auto custom-scrollbar flex-1 min-h-0">
-                  {history.map((record, idx) => (
-                    <div key={idx} className={`flex items-center justify-between p-2 sm:p-3 rounded-lg border transition-all shrink-0 ${idx === 0 ? 'bg-slate-700 border-purple-500' : 'bg-slate-900 border-slate-700 opacity-80'}`}>
-                      <div className="flex items-center gap-2 sm:gap-4">
-                        <span className="text-slate-400 w-3 sm:w-4 text-[10px] sm:text-sm font-mono">{record.attempt}.</span>
-                        <div className="flex flex-wrap gap-0.5 sm:gap-2">
-                          {record.guess.map((id, i) => (
-                            <div key={i} className="text-sm sm:text-xl" title={getIngredientDetails(id).name}>
-                              {getIngredientDetails(id).emoji}
-                            </div>
-                          ))}
+                <div className="flex-1 overflow-y-auto custom-scrollbar relative pb-10">
+                  <div className="p-3 sm:p-5 space-y-2 sm:space-y-3">
+                    {history.map((record, idx) => (
+                      <div key={idx} className={`flex items-center justify-between p-3 sm:p-4 rounded-lg border transition-all ${idx === 0 ? 'bg-slate-700 border-purple-500 shadow-md' : 'bg-slate-900 border-slate-700 opacity-80'}`}>
+                        <div className="flex items-center gap-3 sm:gap-4">
+                          <span className="text-slate-400 w-4 sm:w-5 text-xs sm:text-base font-mono text-center font-bold">{record.attempt}.</span>
+                          <div className="flex flex-wrap gap-1 sm:gap-2">
+                            {record.guess.map((id, i) => (
+                              <div key={i} className="text-base sm:text-xl" title={getIngredientDetails(id).name}>
+                                {getIngredientDetails(id).emoji}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                        <div className="flex gap-1.5 sm:gap-2 text-[10px] sm:text-sm font-bold shrink-0">
+                          <div className={`flex items-center gap-0.5 sm:gap-1 px-2 py-1.5 sm:px-3 sm:py-2 rounded-md ${record.perfect > 0 ? 'bg-green-900/60 text-green-400' : 'bg-slate-800 text-slate-500'}`}>
+                            <Sparkles className="w-3 h-3 sm:w-4 sm:h-4" /> {record.perfect}
+                          </div>
+                          <div className={`flex items-center gap-0.5 sm:gap-1 px-2 py-1.5 sm:px-3 sm:py-2 rounded-md ${record.unstable > 0 ? 'bg-yellow-900/60 text-yellow-400' : 'bg-slate-800 text-slate-500'}`}>
+                            <AlertCircle className="w-3 h-3 sm:w-4 sm:h-4" /> {record.unstable}
+                          </div>
                         </div>
                       </div>
-                      <div className="flex gap-1.5 sm:gap-2 text-[10px] sm:text-sm font-bold">
-                        <div className={`flex items-center gap-0.5 sm:gap-1 px-1.5 sm:px-2 py-1 rounded-md ${record.perfect > 0 ? 'bg-green-900/60 text-green-400' : 'bg-slate-800 text-slate-500'}`}>
-                          <Sparkles className="w-2.5 h-2.5 sm:w-3 sm:h-3" /> {record.perfect}
-                        </div>
-                        <div className={`flex items-center gap-0.5 sm:gap-1 px-1.5 sm:px-2 py-1 rounded-md ${record.unstable > 0 ? 'bg-yellow-900/60 text-yellow-400' : 'bg-slate-800 text-slate-500'}`}>
-                          <AlertCircle className="w-2.5 h-2.5 sm:w-3 sm:h-3" /> {record.unstable}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
               ) : (
                 <div className="flex-1 flex items-center justify-center text-slate-500 text-xs sm:text-sm p-4 text-center">
@@ -998,7 +1103,6 @@ export default function PotionShopSim() {
             
           </div>
         )}
-
       </div>
     </div>
   );
