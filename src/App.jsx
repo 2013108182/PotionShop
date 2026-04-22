@@ -6,34 +6,33 @@ import {
   ScrollText, CheckCircle2, XCircle, Info, Save
 } from 'lucide-react';
 
-// --- 데이터 정의 (재료 10종, 이모지 및 이름 개선) ---
 const INGREDIENTS = [
-  { id: '1', emoji: '🌺', name: '적염화', color: 'bg-red-100 border-red-300 text-red-700' },
-  { id: '2', emoji: '💧', name: '정령의 눈물', color: 'bg-blue-100 border-blue-300 text-blue-700' },
-  { id: '3', emoji: '🐉', name: '용의 비늘', color: 'bg-emerald-100 border-emerald-300 text-emerald-700' },
-  { id: '4', emoji: '🧚', name: '요정 가루', color: 'bg-pink-100 border-pink-300 text-pink-700' },
-  { id: '5', emoji: '🌊', name: '심해 소금', color: 'bg-cyan-100 border-cyan-300 text-cyan-700' },
-  { id: '6', emoji: '🦄', name: '유니콘 뿔', color: 'bg-purple-100 border-purple-300 text-purple-700' },
-  { id: '7', emoji: '🌱', name: '맨드레이크', color: 'bg-green-100 border-green-300 text-green-700' },
-  { id: '8', emoji: '🕸️', name: '밤의 거미줄', color: 'bg-gray-100 border-gray-400 text-gray-700' },
-  { id: '9', emoji: '🌙', name: '달빛 결정', color: 'bg-yellow-100 border-yellow-400 text-yellow-700' },
-  { id: '10', emoji: '🍄', name: '별빛 버섯', color: 'bg-orange-100 border-orange-300 text-orange-700' }
+  { id: '1', emoji: '🌺', name: '적염화', price: 4, color: 'bg-red-100 border-red-300 text-red-700' },
+  { id: '2', emoji: '💧', name: '정령의 눈물', price: 3, color: 'bg-blue-100 border-blue-300 text-blue-700' },
+  { id: '3', emoji: '🐉', name: '용의 비늘', price: 15, color: 'bg-emerald-100 border-emerald-300 text-emerald-700' },
+  { id: '4', emoji: '🧚', name: '요정 가루', price: 12, color: 'bg-pink-100 border-pink-300 text-pink-700' },
+  { id: '5', emoji: '🌊', name: '심해 소금', price: 5, color: 'bg-cyan-100 border-cyan-300 text-cyan-700' },
+  { id: '6', emoji: '🦄', name: '유니콘 뿔', price: 18, color: 'bg-purple-100 border-purple-300 text-purple-700' },
+  { id: '7', emoji: '🌱', name: '맨드레이크', price: 6, color: 'bg-green-100 border-green-300 text-green-700' },
+  { id: '8', emoji: '🕸️', name: '밤의 거미줄', price: 4, color: 'bg-gray-100 border-gray-400 text-gray-700' },
+  { id: '9', emoji: '🌙', name: '달빛 결정', price: 10, color: 'bg-yellow-100 border-yellow-400 text-yellow-700' },
+  { id: '10', emoji: '🍄', name: '별빛 버섯', price: 7, color: 'bg-orange-100 border-orange-300 text-orange-700' }
 ];
 
 const POTION_DB = {
-  "깊은 밤의 숙면 물약": { slots: 3, maxAttempts: 8, baseReward: 35 },
-  "올빼미의 시야 물약": { slots: 3, maxAttempts: 8, baseReward: 35 },
-  "천상의 목소리 영약": { slots: 3, maxAttempts: 8, baseReward: 40 },
-  "광속의 깃털 물약": { slots: 3, maxAttempts: 8, baseReward: 45 },
-  "신속의 치유 물약": { slots: 4, maxAttempts: 10, baseReward: 50 },
-  "맹독성 가스 물약": { slots: 4, maxAttempts: 10, baseReward: 55 },
-  "마력 폭주 영약": { slots: 4, maxAttempts: 10, baseReward: 60 },
-  "거인의 힘 물약": { slots: 4, maxAttempts: 10, baseReward: 65 },
-  "그림자 걸음 물약": { slots: 4, maxAttempts: 10, baseReward: 70 },
-  "눈부신 오로라 물약": { slots: 5, maxAttempts: 12, baseReward: 85 },
-  "용의 숨결 물약": { slots: 5, maxAttempts: 12, baseReward: 90 },
-  "시간 역행의 영약": { slots: 5, maxAttempts: 12, baseReward: 95 },
-  "태양 극복의 영약": { slots: 5, maxAttempts: 12, baseReward: 100 }
+  "깊은 밤의 숙면 물약": { slots: 3, maxAttempts: 8, baseReward: 35, recipe: ['8', '2', '9'] },
+  "올빼미의 시야 물약": { slots: 3, maxAttempts: 8, baseReward: 35, recipe: ['9', '5', '10'] },
+  "천상의 목소리 영약": { slots: 3, maxAttempts: 8, baseReward: 40, recipe: ['4', '7', '2'] },
+  "광속의 깃털 물약": { slots: 3, maxAttempts: 8, baseReward: 45, recipe: ['4', '3', '1'] },
+  "신속의 치유 물약": { slots: 4, maxAttempts: 10, baseReward: 50, recipe: ['6', '7', '2', '4'] },
+  "맹독성 가스 물약": { slots: 4, maxAttempts: 10, baseReward: 55, recipe: ['7', '3', '5', '8'] },
+  "마력 폭주 영약": { slots: 4, maxAttempts: 10, baseReward: 60, recipe: ['10', '6', '3', '1'] },
+  "거인의 힘 물약": { slots: 4, maxAttempts: 10, baseReward: 65, recipe: ['3', '1', '7', '5'] },
+  "그림자 걸음 물약": { slots: 4, maxAttempts: 10, baseReward: 70, recipe: ['8', '9', '5', '10'] },
+  "눈부신 오로라 물약": { slots: 5, maxAttempts: 12, baseReward: 85, recipe: ['9', '10', '4', '6', '2'] },
+  "용의 숨결 물약": { slots: 5, maxAttempts: 12, baseReward: 90, recipe: ['3', '1', '7', '8', '2'] },
+  "시간 역행의 영약": { slots: 5, maxAttempts: 12, baseReward: 95, recipe: ['9', '6', '10', '4', '5'] },
+  "태양 극복의 영약": { slots: 5, maxAttempts: 12, baseReward: 100, recipe: ['5', '9', '8', '1', '6'] }
 };
 
 const POTION_CATALOG = Object.keys(POTION_DB);
@@ -42,21 +41,19 @@ const CUSTOMER_DATA = [
   {
     type: 'villager', emoji: '👨‍🌾', name: '마을 농부',
     quests: [
-      { dialogue: "요즘 잠을 통 못 자서 그러는데... 푹 잘 수 있는 약 하나 만들어 주시오.", potionName: "깊은 밤의 숙면 물약" },
-      { dialogue: "밭일 하다가 허리를 크게 다쳤소. 금방 낫는 약이 필요하오.", potionName: "신속의 치유 물약" },
-      { dialogue: "잡초가 너무 무성해서 골치요. 싹 다 말라 죽일 독한 약 없소?", potionName: "맹독성 가스 물약" },
+      { dialogue: "요즘 잠을 통 못 자서... 푹 잘 수 있는 약이 필요해요.", potionName: "깊은 밤의 숙면 물약" },
       { dialogue: "장작을 패야 하는데 기운이 없구려. 힘이 솟는 약을 지어주시오.", potionName: "거인의 힘 물약" },
-      { dialogue: "요즘 밤눈이 어두워져서 밤길 걷기가 무섭소.", potionName: "올빼미의 시야 물약" }
+      { dialogue: "밭일 하다가 허리를 크게 다쳤소. 금방 낫는 약이 필요하오.", potionName: "신속의 치유 물약" },
+      { dialogue: "잡초가 너무 무성해서 골치요. 싹 다 말라 죽일 독한 약 없소?", potionName: "맹독성 가스 물약" }
     ]
   },
   {
     type: 'bard', emoji: '🧑‍🎤', name: '떠돌이 음유시인',
     quests: [
-      { dialogue: "내일 왕궁 공연이 있소. 목소리가 꾀꼬리처럼 청아해지는 약이 필요하오!", potionName: "천상의 목소리 영약" },
-      { dialogue: "사흘 밤낮으로 작곡을 해야 하오. 잠이 확 깨는 영약이 필요하오!", potionName: "마력 폭주 영약" },
-      { dialogue: "무대에서 돋보이고 싶소! 온몸에서 빛이 나는 약을 주시오!", potionName: "눈부신 오로라 물약" },
-      { dialogue: "손가락이 베여서 류트 연주가 힘들구려. 흉터 없이 낫는 약이 있소?", potionName: "신속의 치유 물약" },
-      { dialogue: "너무 긴장해서 잠이 안 오오... 무대에 서기 전 푹 쉬고 싶소.", potionName: "깊은 밤의 숙면 물약" }
+      { dialogue: "내일 왕궁 공연이 있소. 목소리가 청아해지는 약이 필요하오!", potionName: "천상의 목소리 영약" },
+      { dialogue: "사흘 밤낮으로 작곡을 해야 하오. 마력을 폭발시켜 잠을 쫓고 싶소.", potionName: "마력 폭주 영약" },
+      { dialogue: "무대에서 돋보이고 싶소! 온몸에서 신비로운 빛이 나는 약을 주시오!", potionName: "눈부신 오로라 물약" },
+      { dialogue: "순식간에 다음 마을로 가서 공연해야 하오. 깃털처럼 가볍고 빨라지는 약을 주시오.", potionName: "광속의 깃털 물약" }
     ]
   },
   {
@@ -70,13 +67,12 @@ const CUSTOMER_DATA = [
     ]
   },
   {
-    type: 'knight', emoji: '💂‍♂️', name: '상처입은 기사',
+    type: 'knight', emoji: '💂‍♂️', name: '성기사',
     quests: [
-      { dialogue: "전투 중에 다쳤소! 상처가 금방 아무는 강력 약이 필요하오!", potionName: "신속의 치유 물약" },
-      { dialogue: "적진에 몰래 잠입해야 하오. 그림자처럼 기척을 지우는 약을 주시오.", potionName: "그림자 걸음 물약" },
-      { dialogue: "야간 정찰 임무를 맡았소. 칠흑 같은 어둠 속에서도 적을 볼 수 있게 해주시오.", potionName: "올빼미의 시야 물약" },
-      { dialogue: "거대한 몬스터를 상대해야 하오. 바위도 부술 수 있는 괴력을 주시오!", potionName: "거인의 힘 물약" },
-      { dialogue: "용의 브레스도 견뎌낼 수 있는 화염 마법 약이 필요하오!", potionName: "용의 숨결 물약" }
+      { dialogue: "전투 중에 상처를 입었소! 재생력이 필요한 상태요.", potionName: "신속의 치유 물약" },
+      { dialogue: "적진에 몰래 잠입해야 하오. 기척을 완전히 지우는 약을 주시오.", potionName: "그림자 걸음 물약" },
+      { dialogue: "야간 정찰 임무를 맡았소. 어둠 속에서도 적을 볼 수 있게 해주시오.", potionName: "올빼미의 시야 물약" },
+      { dialogue: "거대한 몬스터를 상대해야 하오. 바위도 부술 수 있는 괴력을 주시오.", potionName: "거인의 힘 물약" }
     ]
   },
   {
@@ -123,15 +119,13 @@ const CUSTOMER_DATA = [
     type: 'vampire', emoji: '🧛‍♂️', name: '창백한 뱀파이어',
     quests: [
       { dialogue: "햇빛을 견딜 수 있는 약이 필요하다... 피보다 비싼 값을 치르지.", potionName: "태양 극복의 영약" },
-      { dialogue: "인간들의 마을에 섞여 들어가야 해. 내 기척과 냄새를 완전히 지워라.", potionName: "그림자 걸음 물약" },
       { dialogue: "오랜 세월을 살다 보니 몸이 둔해졌어. 폭발적인 힘을 낼 약을 다오.", potionName: "거인의 힘 물약" },
-      { dialogue: "사냥꾼들의 은 화살에 맞았다... 재생력을 극한으로 끌어올리는 약을 줘.", potionName: "신속의 치유 물약" },
+      { dialogue: "사냥꾼들의 은 화살에 맞았다... 재생력을 극한으로 끌어올려 다오.", potionName: "신속의 치유 물약" },
       { dialogue: "수백 년 전의 기억이 흐릿해. 과거를 엿볼 수 있는 약을 만들어다오.", potionName: "시간 역행의 영약" }
     ]
   }
 ];
 
-// 처방 다양성을 위해 모든 퀘스트를 1차원 배열로 풀어서 관리
 const ALL_QUESTS = [];
 CUSTOMER_DATA.forEach(customer => {
   customer.quests.forEach(quest => {
@@ -145,9 +139,9 @@ CUSTOMER_DATA.forEach(customer => {
   });
 });
 
-const ITEM_COSTS = { hintIngredient: 5, hintSlot: 15 };
+const ITEM_COSTS = { hintIngredient: 10, hintSlot: 25 };
 const SAVE_KEY = 'potionShopSave';
-const TUTORIAL_KEY = 'potionShopTutorialV2';
+const TUTORIAL_KEY = 'potionShopTutorialV3';
 
 export default function PotionShopSim() {
   const [appState, setAppState] = useState('start');
@@ -162,7 +156,11 @@ export default function PotionShopSim() {
   const [reputation, setReputation] = useState(50);
   const [inventory, setInventory] = useState({ hintIngredient: 0, hintSlot: 0 });
   
-  const [showShopModal, setShowShopModal] = useState(false);
+  // 재료 인벤토리 추가
+  const [ingredientsQty, setIngredientsQty] = useState(
+    Object.fromEntries(INGREDIENTS.map(item => [item.id, 20]))
+  );
+  
   const [activeItemMode, setActiveItemMode] = useState(null);
   const [knownIngredients, setKnownIngredients] = useState({});
   const [knownSlots, setKnownSlots] = useState([]);
@@ -181,7 +179,6 @@ export default function PotionShopSim() {
   const [minigameResult, setMinigameResult] = useState(null);
   const [selectedSlotIndex, setSelectedSlotIndex] = useState(null);
 
-  // 로컬 스토리지 초기화 (세이브 및 튜토리얼)
   useEffect(() => {
     const saved = localStorage.getItem(SAVE_KEY);
     if (saved) setHasSaveData(true);
@@ -189,10 +186,9 @@ export default function PotionShopSim() {
     if (tut === 'true') setHasSeenTutorial(true);
   }, []);
 
-  // 자동 저장 로직
   useEffect(() => {
-    if (appState === 'shop' || appState === 'day_end') {
-      const saveData = { day, money, reputation, inventory, dailyCustomers, currentCustomerIndex };
+    if (appState === 'shop' || appState === 'day_end' || appState === 'morning_shop') {
+      const saveData = { appState, day, money, reputation, inventory, ingredientsQty, dailyCustomers, currentCustomerIndex };
       localStorage.setItem(SAVE_KEY, JSON.stringify(saveData));
       setHasSaveData(true);
       
@@ -200,15 +196,14 @@ export default function PotionShopSim() {
       const timer = setTimeout(() => setSaveIndicator(false), 2000);
       return () => clearTimeout(timer);
     }
-  }, [appState, day, money, reputation, inventory, dailyCustomers, currentCustomerIndex]);
+  }, [appState, day, money, reputation, inventory, ingredientsQty, dailyCustomers, currentCustomerIndex]);
 
-  // 튜토리얼 자동 진행 로직 (재료 채우면 자동으로 다음 스텝)
   useEffect(() => {
     if (tutorial.isActive) {
       const guessStr = currentGuess.join('');
-      if (tutorial.step === 'guess_1' && guessStr === '132') setTutorial(p => ({...p, step: 'brew_1'}));
+      if (tutorial.step === 'guess_1' && guessStr === '892') setTutorial(p => ({...p, step: 'brew_1'}));
       if (tutorial.step === 'guess_2' && guessStr === '456') setTutorial(p => ({...p, step: 'brew_2'}));
-      if (tutorial.step === 'guess_3' && guessStr === '123') setTutorial(p => ({...p, step: 'brew_3'}));
+      if (tutorial.step === 'guess_3' && guessStr === '829') setTutorial(p => ({...p, step: 'brew_3'}));
     }
   }, [currentGuess, tutorial.isActive, tutorial.step]);
 
@@ -220,9 +215,10 @@ export default function PotionShopSim() {
       setMoney(data.money);
       setReputation(data.reputation);
       setInventory(data.inventory);
+      if (data.ingredientsQty) setIngredientsQty(data.ingredientsQty);
       setDailyCustomers(data.dailyCustomers || []);
       setCurrentCustomerIndex(data.currentCustomerIndex || 0);
-      setAppState('shop');
+      setAppState(data.appState === 'morning_shop' ? 'morning_shop' : 'shop');
     }
   };
 
@@ -232,20 +228,16 @@ export default function PotionShopSim() {
     setMoney(50);
     setReputation(50);
     setInventory({ hintIngredient: 0, hintSlot: 0 });
+    setIngredientsQty(Object.fromEntries(INGREDIENTS.map(item => [item.id, 20])));
+    setHasSeenTutorial(false);
     startNewDay(1, null);
   };
 
   const startNewDay = (currentDay, lastDayFinalCustomerType) => {
-    const customersCount = 2 + Math.floor(currentDay / 3);
     const queue = [];
-    let lastType = lastDayFinalCustomerType;
-
-    let maxSlotsAllowed = 3;
-    if (currentDay >= 3) maxSlotsAllowed = 4;
-    if (currentDay >= 5) maxSlotsAllowed = 5;
-
-    // 튜토리얼 강제 큐 (1일차 첫 시작)
-    if (!hasSeenTutorial && currentDay === 1) {
+    
+    // 1일차는 1명 고정 (튜토리얼 진행)
+    if (currentDay === 1) {
       setTutorial({ isActive: true, step: 'start_prescription' });
       const villagerQuest = ALL_QUESTS.find(q => q.potionName === '깊은 밤의 숙면 물약');
       queue.push({
@@ -257,24 +249,24 @@ export default function PotionShopSim() {
         potionName: villagerQuest.potionName,
         slots: 3,
         maxAttempts: 8,
-        baseReward: 35,
-        prescriptionCode: '#TUT0'
+        baseReward: 35
       });
-      // 나머지 큐는 1개만 더 추가
-      const extraQuest = ALL_QUESTS.find(q => q.type !== 'villager' && q.potionName !== '깊은 밤의 숙면 물약' && POTION_DB[q.potionName].slots <= 3);
-      queue.push({...extraQuest, id: 1, slots: 3, maxAttempts: 8, baseReward: 35, prescriptionCode: '#TEST'});
     } else {
-      // 일반 큐 (처방 다양화 로직 반영)
-      let availableQuests = ALL_QUESTS.filter(q => POTION_DB[q.potionName].slots <= maxSlotsAllowed)
-                                      .sort(() => Math.random() - 0.5);
+      // 2일차부터
+      let maxSlotsAllowed = 3;
+      if (currentDay >= 3) maxSlotsAllowed = 4;
+      if (currentDay >= 5) maxSlotsAllowed = 5;
+
+      const customersCount = 2 + Math.floor(currentDay / 3);
+      let availableQuests = ALL_QUESTS.filter(q => POTION_DB[q.potionName].slots <= maxSlotsAllowed).sort(() => Math.random() - 0.5);
       
-      const usedTypes = new Set([lastType]);
+      const usedTypes = new Set([lastDayFinalCustomerType]);
       const usedPotions = new Set();
 
       for(let i=0; i < (customersCount > 5 ? 5 : customersCount); i++) {
         let quest = availableQuests.find(q => !usedTypes.has(q.type) && !usedPotions.has(q.potionName));
         if (!quest) quest = availableQuests.find(q => !usedPotions.has(q.potionName));
-        if (!quest) quest = availableQuests[0]; // 최후 수단
+        if (!quest) quest = availableQuests[0];
 
         if (quest) {
           usedTypes.add(quest.type);
@@ -291,8 +283,7 @@ export default function PotionShopSim() {
             potionName: quest.potionName,
             slots: potionInfo.slots,
             maxAttempts: potionInfo.maxAttempts,
-            baseReward: potionInfo.baseReward,
-            prescriptionCode: '#' + Math.random().toString(36).substring(2, 6).toUpperCase()
+            baseReward: potionInfo.baseReward
           });
         }
       }
@@ -301,21 +292,31 @@ export default function PotionShopSim() {
     setDailyCustomers(queue);
     setCurrentCustomerIndex(0);
     setDay(currentDay);
-    setAppState('shop');
     setIsDiagnosing(false);
     setDiagnosisFeedback(null);
+
+    // 1일차는 바로 영업 시작, 2일차부터는 아침 시장 먼저
+    if (currentDay === 1) {
+      setAppState('shop');
+    } else {
+      setAppState('morning_shop');
+    }
   };
 
   const currentCustomer = dailyCustomers[currentCustomerIndex];
 
   const buyItem = (type) => {
     const cost = ITEM_COSTS[type];
-    if (reputation - cost <= 0) {
-      alert("명성이 0 이하로 떨어지면 파산합니다! 구매할 수 없습니다.");
-      return;
-    }
-    setReputation(prev => prev - cost);
+    if (money < cost) return; 
+    setMoney(prev => prev - cost);
     setInventory(prev => ({ ...prev, [type]: prev[type] + 1 }));
+  };
+
+  const buyIngredient = (id) => {
+    const item = INGREDIENTS.find(i => i.id === id);
+    if (money < item.price) return;
+    setMoney(prev => prev - item.price);
+    setIngredientsQty(prev => ({ ...prev, [id]: prev[id] + 1 }));
   };
 
   const moveToNextCustomer = () => {
@@ -354,11 +355,11 @@ export default function PotionShopSim() {
     const slotsCount = currentCustomer.slots;
     
     if (tutorial.isActive) {
-      setSecretRecipe(['1', '2', '3']);
+      setSecretRecipe(['8', '2', '9']);
       setTutorial(p => ({...p, step: 'guess_1'}));
     } else {
-      const shuffled = [...INGREDIENTS].sort(() => 0.5 - Math.random());
-      setSecretRecipe(shuffled.slice(0, slotsCount).map(item => item.id));
+      const fixedRecipe = POTION_DB[currentCustomer.potionName].recipe;
+      setSecretRecipe([...fixedRecipe]);
     }
     
     setCurrentGuess(Array(slotsCount).fill(null));
@@ -376,9 +377,9 @@ export default function PotionShopSim() {
   const getTutorialAllowedIngredient = () => {
     if (!tutorial.isActive) return null;
     let target = [];
-    if (tutorial.step === 'guess_1') target = ['1', '3', '2'];
+    if (tutorial.step === 'guess_1') target = ['8', '9', '2'];
     else if (tutorial.step === 'guess_2') target = ['4', '5', '6'];
-    else if (tutorial.step === 'guess_3') target = ['1', '2', '3'];
+    else if (tutorial.step === 'guess_3') target = ['8', '2', '9'];
     else return null;
 
     const emptyIndex = currentGuess.indexOf(null);
@@ -393,9 +394,9 @@ export default function PotionShopSim() {
       if (tutorial.step.startsWith('guess_')) {
         const allowed = getTutorialAllowedIngredient();
         if (allowed && id !== allowed) return;
-        if (currentGuess.includes(id)) return; // 튜토리얼 중 재료 빼기 방지
+        if (currentGuess.includes(id)) return;
       } else {
-        return; // 튜토리얼 중 다른 버튼 클릭 방지
+        return; 
       }
     }
 
@@ -410,6 +411,9 @@ export default function PotionShopSim() {
     if (currentGuess.includes(id)) {
       setCurrentGuess(currentGuess.map(itemId => itemId === id ? null : itemId));
     } else if (currentGuess.includes(null)) {
+      // 2일차부터는 재고 확인
+      if (day > 1 && ingredientsQty[id] <= 0) return;
+
       const newGuess = [...currentGuess];
       if (selectedSlotIndex !== null && newGuess[selectedSlotIndex] === null) {
         newGuess[selectedSlotIndex] = id;
@@ -450,6 +454,17 @@ export default function PotionShopSim() {
     setActiveItemMode(null);
     setSelectedSlotIndex(null);
 
+    // 2일차부터 재료 실제 차감
+    if (day > 1) {
+      setIngredientsQty(prev => {
+        const next = { ...prev };
+        currentGuess.forEach(id => {
+          next[id] -= 1;
+        });
+        return next;
+      });
+    }
+
     setBrewPhase('heating');
     setEffectText('🔥 끓이는 중...');
 
@@ -480,7 +495,6 @@ export default function PotionShopSim() {
           finishOrder(false, newHistory.length);
         }
 
-        // 튜토리얼 스텝 진행
         if (tutorial.isActive) {
           if (tutorial.step === 'brew_1') setTutorial(p => ({...p, step: 'explain_1'}));
           else if (tutorial.step === 'brew_2') setTutorial(p => ({...p, step: 'explain_2'}));
@@ -536,20 +550,20 @@ export default function PotionShopSim() {
     switch (tutorial.step) {
       case 'start_prescription': return "마법약 상점에 오신 것을 환영합니다!\n첫 손님이 증상을 이야기하고 있네요.\n아래의 [처방전 작성하기] 버튼을 눌러보세요.";
       case 'pick_potion': return "잠을 푹 자고 싶어 하는군요.\n목록에서 [깊은 밤의 숙면 물약]을 선택하세요.";
-      case 'guess_1': return "조제실입니다! 튜토리얼을 위해 지시하는 재료를 넣어보세요.\n[적염화(🌺)], [용의 비늘(🐉)], [정령의 눈물(💧)] 순서대로 클릭하세요.";
+      case 'guess_1': return "조제실입니다! 튜토리얼을 위해 지시하는 재료를 넣어보세요.\n[밤의 거미줄(🕸️)], [달빛 결정(🌙)], [정령의 눈물(💧)] 순서대로 클릭하세요.";
       case 'brew_1': return "좋습니다! 이제 가마솥 아래의 [조합하기] 버튼을 눌러 결과를 확인해보세요.";
-      case 'explain_1': return "결과가 나왔습니다! [완벽 1, 불안정 2]군요.\n\n✨ 완벽: 종류와 위치가 모두 일치\n⚠️ 불안정: 종류는 맞지만 위치가 틀림\n\n1, 2, 3번 재료가 모두 정답에 포함된다는 뜻입니다!";
+      case 'explain_1': return "결과가 나왔습니다! [완벽 1, 불안정 2]군요.\n\n✨ 완벽: 종류와 위치가 모두 일치\n⚠️ 불안정: 종류는 맞지만 위치가 틀림\n\n이 세 가지 재료가 모두 정답에 포함된다는 뜻입니다!";
       case 'guess_2': return "이번엔 전혀 다른 재료를 넣어볼까요?\n[요정 가루(🧚)], [심해 소금(🌊)], [유니콘 뿔(🦄)]을 순서대로 클릭하세요.";
       case 'brew_2': return "다시 [조합하기] 버튼을 눌러보세요.";
-      case 'explain_2': return "결과 [완벽 0, 불안정 0]이 나왔습니다!\n\n이건 4, 5, 6번 재료가 정답에 전혀 쓰이지 않는다는 뜻입니다. 확실한 오답을 걸러내는 것도 중요합니다!";
-      case 'guess_3': return "이제 정답을 맞혀봅시다!\n처음에 1, 2, 3이 정답 재료임을 알아냈죠?\n위치를 바꿔서 [적염화(🌺)], [정령의 눈물(💧)], [용의 비늘(🐉)] 순서로 넣어보세요.";
+      case 'explain_2': return "결과 [완벽 0, 불안정 0]이 나왔습니다!\n\n이건 방금 넣은 재료들이 정답에 전혀 쓰이지 않는다는 뜻입니다. 확실한 오답을 걸러내는 것도 중요합니다!";
+      case 'guess_3': return "이제 정답을 맞혀봅시다!\n처음에 넣었던 세 재료가 정답임을 알아냈죠?\n위치를 바꿔서 [밤의 거미줄(🕸️)], [정령의 눈물(💧)], [달빛 결정(🌙)] 순서로 넣어보세요.";
       case 'brew_3': return "마지막으로 [조합하기] 버튼을 누르세요!";
       default: return "";
     }
   };
 
   const renderTopBar = () => (
-    <div className="flex items-center justify-between bg-slate-800 p-3 sm:p-4 rounded-xl border border-slate-700 shadow-md mb-4 sm:mb-6 relative z-20">
+    <div className="flex items-center justify-between bg-slate-800 p-3 sm:p-4 rounded-xl border border-slate-700 shadow-md mb-4 sm:mb-6 relative z-20 shrink-0">
       <div className="flex items-center gap-2 text-purple-300 font-bold text-lg sm:text-xl relative">
         <Store className="w-5 h-5 sm:w-6 sm:h-6" />
         <span>Day {day}</span>
@@ -586,9 +600,10 @@ export default function PotionShopSim() {
             위대한 마법약 상점
           </h1>
           <p className="text-slate-400 leading-relaxed bg-slate-800 p-3 sm:p-4 rounded-lg border border-slate-700 text-xs sm:text-sm mb-6">
-            손님들의 다양한 증상을 듣고 올바른 마법약을 처방하세요!<br/>
-            <span className="text-purple-300 font-bold">(※ 동일한 물약이라도 체질에 따라 레시피가 다릅니다)</span><br/><br/>
-            오진하거나 조제에 실패하면 명성이 깎이며,<br/>명성이 0이 되면 파산합니다.
+            손님들의 증상을 듣고 알맞은 마법약을 처방한 뒤,<br/>
+            <span className="text-purple-300 font-bold">고정된 마법약 레시피</span>를 추리하여 완벽하게 조제하세요!<br/><br/>
+            <span className="text-yellow-400 font-bold">2일차부터는 아침마다 재료를 구매해야 합니다.</span><br/>
+            오진하거나 조제에 실패하면 명성이 깎이며 파산할 수 있습니다.
           </p>
           
           <div className="space-y-3">
@@ -649,6 +664,84 @@ export default function PotionShopSim() {
     );
   }
 
+  if (appState === 'morning_shop') {
+    return (
+      <div className="min-h-[100dvh] bg-slate-900 text-slate-100 p-2 sm:p-4 flex flex-col">
+        {renderTopBar()}
+        <div className="flex-1 bg-slate-800 rounded-2xl border border-slate-700 p-4 sm:p-6 shadow-xl flex flex-col max-w-2xl mx-auto w-full mt-2 sm:mt-4">
+          <h2 className="text-xl sm:text-2xl font-bold text-yellow-400 mb-2 flex items-center gap-2"><ShoppingBag className="w-5 h-5 sm:w-6 sm:h-6"/> 아침 시장</h2>
+          <p className="text-slate-400 text-xs sm:text-sm mb-4 sm:mb-6">오늘 영업을 위해 재료와 아이템을 준비하세요.</p>
+          
+          <div className="flex-1 overflow-y-auto pr-1 sm:pr-2 custom-scrollbar space-y-4 sm:space-y-6">
+            <div>
+              <h3 className="text-base sm:text-lg font-bold text-purple-300 mb-2 sm:mb-3 border-b border-slate-700 pb-2">재료 구매</h3>
+              <div className="grid grid-cols-3 sm:grid-cols-5 gap-2 sm:gap-3">
+                {INGREDIENTS.map(item => (
+                  <button 
+                    key={item.id}
+                    onClick={() => buyIngredient(item.id)}
+                    disabled={money < item.price}
+                    className="bg-slate-900 border border-slate-700 rounded-xl p-2 sm:p-3 flex flex-col items-center justify-center hover:border-yellow-500 transition-colors disabled:opacity-50"
+                  >
+                    <span className="text-xl sm:text-2xl mb-1">{item.emoji}</span>
+                    <span className="text-[9px] sm:text-[10px] text-slate-300 mb-1 text-center leading-tight break-keep">{item.name}</span>
+                    <span className="text-[10px] sm:text-xs font-bold text-yellow-400 mb-1">{item.price} G</span>
+                    <span className="text-[9px] sm:text-[10px] text-slate-400 bg-slate-800/80 px-1.5 py-0.5 rounded border border-slate-700 w-full text-center">보유: {ingredientsQty[item.id]}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <h3 className="text-base sm:text-lg font-bold text-blue-300 mb-2 sm:mb-3 border-b border-slate-700 pb-2">도구 구매</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
+                <button 
+                  onClick={() => buyItem('hintIngredient')}
+                  disabled={money < ITEM_COSTS.hintIngredient}
+                  className="bg-slate-900 border border-slate-700 rounded-xl p-3 sm:p-4 flex justify-between items-center hover:border-yellow-500 transition-colors disabled:opacity-50"
+                >
+                  <div className="flex items-center gap-2 sm:gap-3">
+                    <Search className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-400"/>
+                    <div className="text-left">
+                      <div className="text-xs sm:text-sm font-bold">재료 감별 돋보기</div>
+                      <div className="text-[10px] sm:text-xs text-slate-400">보유: {inventory.hintIngredient}</div>
+                    </div>
+                  </div>
+                  <div className="text-yellow-400 font-bold text-xs sm:text-sm">{ITEM_COSTS.hintIngredient} G</div>
+                </button>
+                <button 
+                  onClick={() => buyItem('hintSlot')}
+                  disabled={money < ITEM_COSTS.hintSlot}
+                  className="bg-slate-900 border border-slate-700 rounded-xl p-3 sm:p-4 flex justify-between items-center hover:border-yellow-500 transition-colors disabled:opacity-50"
+                >
+                  <div className="flex items-center gap-2 sm:gap-3">
+                    <Eye className="w-4 h-4 sm:w-5 sm:h-5 text-purple-400"/>
+                    <div className="text-left">
+                      <div className="text-xs sm:text-sm font-bold">슬롯 투시 구슬</div>
+                      <div className="text-[10px] sm:text-xs text-slate-400">보유: {inventory.hintSlot}</div>
+                    </div>
+                  </div>
+                  <div className="text-yellow-400 font-bold text-xs sm:text-sm">{ITEM_COSTS.hintSlot} G</div>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <button 
+            onClick={() => {
+              setAppState('shop');
+              setIsDiagnosing(false);
+              setDiagnosisFeedback(null);
+            }}
+            className="mt-4 sm:mt-6 w-full py-3 sm:py-4 bg-green-600 hover:bg-green-500 text-white font-bold rounded-xl text-sm sm:text-lg shadow-lg flex justify-center items-center gap-2"
+          >
+            <Store className="w-4 h-4 sm:w-5 sm:h-5"/> 영업 시작
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-[100dvh] bg-slate-900 text-slate-100 p-2 sm:p-4 font-sans selection:bg-purple-500/30 flex flex-col">
       <style>{`
@@ -691,63 +784,8 @@ export default function PotionShopSim() {
       <div className="max-w-2xl mx-auto w-full relative overflow-hidden pb-2 sm:pb-4 flex-1 flex flex-col">
         {renderTopBar()}
 
-        {showShopModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-            <div className="bg-slate-800 border-2 border-blue-500 rounded-2xl p-4 sm:p-6 max-w-sm w-full shadow-[0_0_40px_rgba(59,130,246,0.3)]">
-              <div className="flex justify-between items-center mb-4 sm:mb-6">
-                <h2 className="text-xl sm:text-2xl font-bold text-blue-300 flex items-center gap-2">
-                  <ShoppingBag className="w-5 h-5 sm:w-6 sm:h-6" /> 도구 상점
-                </h2>
-                <button onClick={() => setShowShopModal(false)} className="text-slate-400 hover:text-white">
-                  <X className="w-5 h-5 sm:w-6 sm:h-6" />
-                </button>
-              </div>
-              
-              <div className="space-y-3 sm:space-y-4">
-                <div className="bg-slate-900 p-3 sm:p-4 rounded-xl border border-slate-700 flex justify-between items-center">
-                  <div>
-                    <h3 className="font-bold text-white flex items-center gap-1 text-sm sm:text-base"><Search className="w-3 h-3 sm:w-4 sm:h-4 text-indigo-400"/> 재료 감별 돋보기</h3>
-                    <p className="text-[10px] sm:text-xs text-slate-400 mt-1">특정 재료가 레시피에 쓰이는지 O/X.</p>
-                  </div>
-                  <button 
-                    onClick={() => buyItem('hintIngredient')}
-                    className="ml-2 px-2 py-1.5 sm:px-3 sm:py-2 bg-slate-800 hover:bg-indigo-900 border border-indigo-500 rounded-lg text-xs sm:text-sm font-bold text-indigo-300 flex flex-col items-center min-w-[60px] sm:min-w-[70px]"
-                  >
-                    <span>{ITEM_COSTS.hintIngredient} 명성</span>
-                    <span className="text-[10px] sm:text-xs text-slate-400">보유: {inventory.hintIngredient}</span>
-                  </button>
-                </div>
-
-                <div className="bg-slate-900 p-3 sm:p-4 rounded-xl border border-slate-700 flex justify-between items-center">
-                  <div>
-                    <h3 className="font-bold text-white flex items-center gap-1 text-sm sm:text-base"><Eye className="w-3 h-3 sm:w-4 sm:h-4 text-purple-400"/> 슬롯 투시 구슬</h3>
-                    <p className="text-[10px] sm:text-xs text-slate-400 mt-1">가마솥의 칸에 들어갈 재료를 확인.</p>
-                  </div>
-                  <button 
-                    onClick={() => buyItem('hintSlot')}
-                    className="ml-2 px-2 py-1.5 sm:px-3 sm:py-2 bg-slate-800 hover:bg-purple-900 border border-purple-500 rounded-lg text-xs sm:text-sm font-bold text-purple-300 flex flex-col items-center min-w-[60px] sm:min-w-[70px]"
-                  >
-                    <span>{ITEM_COSTS.hintSlot} 명성</span>
-                    <span className="text-[10px] sm:text-xs text-slate-400">보유: {inventory.hintSlot}</span>
-                  </button>
-                </div>
-              </div>
-
-              <div className="mt-4 sm:mt-6 text-center text-xs sm:text-sm text-slate-500">
-                아이템은 조제실(미니게임)에서 사용할 수 있습니다.
-              </div>
-            </div>
-          </div>
-        )}
-
         {appState === 'shop' && currentCustomer && (
           <div className="bg-slate-900 rounded-t-3xl border-4 border-slate-700 flex-1 overflow-hidden relative shadow-2xl flex flex-col justify-end animate-in fade-in duration-500 min-h-[450px]">
-            <div className="absolute inset-0 bg-slate-800/50 flex justify-around p-4">
-              <div className="w-1/4 h-24 sm:h-32 bg-slate-700 rounded-lg border-b-4 border-slate-800 mt-6 sm:mt-10 opacity-50"></div>
-              <div className="w-1/4 h-24 sm:h-32 bg-slate-700 rounded-lg border-b-4 border-slate-800 mt-12 sm:mt-20 opacity-50"></div>
-              <div className="w-1/4 h-24 sm:h-32 bg-slate-700 rounded-lg border-b-4 border-slate-800 mt-6 sm:mt-10 opacity-50"></div>
-            </div>
-
             <div className="absolute top-3 left-3 sm:top-4 sm:left-4 bg-slate-900/80 px-2 py-1 sm:px-3 sm:py-1 rounded-full text-xs sm:text-sm font-semibold text-slate-300 flex items-center gap-1 sm:gap-2 z-10 border border-slate-700">
               <Users className="w-3 h-3 sm:w-4 sm:h-4" /> 
               대기표: {currentCustomerIndex + 1} / {dailyCustomers.length}
@@ -790,43 +828,45 @@ export default function PotionShopSim() {
               <div className="absolute top-0 w-full h-1 sm:h-2 bg-white/10"></div>
               
               {!isDiagnosing ? (
-                <div className="h-20 sm:h-32 flex items-center justify-center px-4">
+                <div className="h-20 sm:h-32 flex flex-col sm:flex-row items-center justify-center px-4 gap-2 sm:gap-4 py-2 sm:py-0">
                   <button 
                     onClick={() => setIsDiagnosing(true)}
                     disabled={diagnosisFeedback !== null || (tutorial.isActive && tutorial.step !== 'start_prescription')}
-                    className={`w-full sm:w-auto px-4 py-3 sm:px-8 sm:py-4 hover:bg-indigo-500 text-white font-black text-sm sm:text-xl rounded-xl shadow-[0_6px_0_rgba(67,56,202,1)] sm:shadow-[0_8px_0_rgba(67,56,202,1)] hover:translate-y-[2px] transition-all flex items-center justify-center gap-2 sm:gap-3 animate-fade-in-btn disabled:opacity-50 disabled:cursor-not-allowed ${tutorial.isActive && tutorial.step === 'start_prescription' ? 'bg-indigo-500 animate-pulse ring-4 ring-indigo-400' : 'bg-indigo-600'}`}
+                    className={`w-full sm:w-auto px-4 py-2.5 sm:px-8 sm:py-4 hover:bg-indigo-500 text-white font-black text-sm sm:text-xl rounded-xl shadow-[0_6px_0_rgba(67,56,202,1)] sm:shadow-[0_8px_0_rgba(67,56,202,1)] hover:translate-y-[2px] transition-all flex items-center justify-center gap-2 sm:gap-3 animate-fade-in-btn disabled:opacity-50 disabled:cursor-not-allowed ${tutorial.isActive && tutorial.step === 'start_prescription' ? 'bg-indigo-500 animate-pulse ring-4 ring-indigo-400' : 'bg-indigo-600'}`}
                   >
                     <ScrollText className="w-4 h-4 sm:w-6 sm:h-6" /> 처방전 작성하기
                   </button>
                 </div>
               ) : (
-                <div className="bg-slate-800 border-t-4 border-slate-600 p-2 sm:p-4 animate-slide-up rounded-t-2xl max-h-[45vh] sm:max-h-[300px] overflow-y-auto custom-scrollbar">
-                  <div className="flex justify-between items-center mb-2 sm:mb-4 sticky top-0 bg-slate-800 py-1 z-10">
+                <div className="bg-slate-800 border-t-4 border-slate-600 animate-slide-up rounded-t-2xl flex flex-col max-h-[45vh] sm:max-h-[300px]">
+                  <div className="flex justify-between items-center p-3 sm:p-4 border-b border-slate-700 bg-slate-800 shrink-0 z-10 rounded-t-2xl">
                     <h3 className="text-white font-bold flex items-center gap-1 sm:gap-2 text-xs sm:text-base"><ScrollText className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-400"/> 알맞은 약을 고르세요</h3>
                     <button onClick={() => setIsDiagnosing(false)} className="text-slate-400 hover:text-white bg-slate-700 p-1 rounded">
                       <X className="w-4 h-4 sm:w-5 sm:h-5"/>
                     </button>
                   </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 sm:gap-2">
-                    {POTION_CATALOG.map((potionName, idx) => {
-                      const isTutorialTarget = tutorial.isActive && potionName === '깊은 밤의 숙면 물약';
-                      const isTutorialDisabled = tutorial.isActive && potionName !== '깊은 밤의 숙면 물약';
-                      return (
-                        <button
-                          key={idx}
-                          onClick={() => handleDiagnose(potionName)}
-                          disabled={diagnosisFeedback !== null || isTutorialDisabled}
-                          className={`p-2 sm:p-3 text-left rounded-lg sm:rounded-xl text-[11px] sm:text-sm font-semibold transition-colors flex items-center gap-2 border ${
-                            isTutorialTarget ? 'bg-indigo-600 text-white border-indigo-400 animate-pulse ring-2 ring-indigo-500' : 
-                            isTutorialDisabled ? 'bg-slate-800 text-slate-600 border-slate-700 cursor-not-allowed' :
-                            'bg-slate-700 hover:bg-indigo-600 text-slate-200 hover:text-white border-slate-600 hover:border-indigo-400'
-                          }`}
-                        >
-                          <FlaskConical className="w-3 h-3 sm:w-4 sm:h-4 opacity-70 shrink-0" />
-                          <span className="truncate">{potionName}</span>
-                        </button>
-                      );
-                    })}
+                  <div className="p-2 sm:p-4 overflow-y-auto custom-scrollbar flex-1">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 sm:gap-2 pb-2">
+                      {POTION_CATALOG.map((potionName, idx) => {
+                        const isTutorialTarget = tutorial.isActive && potionName === '깊은 밤의 숙면 물약';
+                        const isTutorialDisabled = tutorial.isActive && potionName !== '깊은 밤의 숙면 물약';
+                        return (
+                          <button
+                            key={idx}
+                            onClick={() => handleDiagnose(potionName)}
+                            disabled={diagnosisFeedback !== null || isTutorialDisabled}
+                            className={`p-2 sm:p-3 text-left rounded-lg sm:rounded-xl text-[11px] sm:text-sm font-semibold transition-colors flex items-center gap-2 border ${
+                              isTutorialTarget ? 'bg-indigo-600 text-white border-indigo-400 animate-pulse ring-2 ring-indigo-500' : 
+                              isTutorialDisabled ? 'bg-slate-800 text-slate-600 border-slate-700 cursor-not-allowed' :
+                              'bg-slate-700 hover:bg-indigo-600 text-slate-200 hover:text-white border-slate-600 hover:border-indigo-400'
+                            }`}
+                          >
+                            <FlaskConical className="w-3 h-3 sm:w-4 sm:h-4 opacity-70 shrink-0" />
+                            <span className="truncate">{potionName}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
                 </div>
               )}
@@ -860,7 +900,7 @@ export default function PotionShopSim() {
                     </>
                   )}
 
-                  <div className="flex justify-center gap-4 sm:gap-6 py-3 sm:py-4 bg-slate-900 rounded-xl">
+                  <div className="flex justify-center gap-4 sm:gap-6 py-3 sm:py-4 bg-slate-900 rounded-xl mt-4">
                     <div className="text-center flex flex-col justify-end">
                       <p className="text-xs sm:text-sm text-slate-400 mb-1">획득 골드</p>
                       <p className={`font-bold text-base sm:text-lg flex flex-col items-center justify-center ${minigameResult.earnedMoney > 0 ? 'text-yellow-400' : 'text-slate-500'}`}>
@@ -892,7 +932,7 @@ export default function PotionShopSim() {
                   <FlaskConical className="w-5 h-5 sm:w-6 sm:h-6" /> 조제실
                 </h2>
                 <p className="text-[11px] sm:text-sm text-slate-400 mt-1 truncate max-w-[180px] sm:max-w-xs">
-                  {currentCustomer?.potionName} <span className="text-purple-400 font-mono text-[9px] sm:text-xs bg-purple-900/40 px-1 py-0.5 sm:px-1.5 sm:py-0.5 rounded ml-1">{currentCustomer?.prescriptionCode}</span>
+                  {currentCustomer?.potionName}
                 </p>
               </div>
               <p className="text-[10px] sm:text-sm text-red-400 font-semibold animate-pulse bg-red-900/30 px-2 py-1 sm:px-3 sm:py-1 rounded-full whitespace-nowrap">
@@ -933,14 +973,6 @@ export default function PotionShopSim() {
                 >
                   <Eye className="w-3 h-3 sm:w-4 sm:h-4" /> 구슬 ({inventory.hintSlot})
                 </button>
-
-                <button 
-                  onClick={() => setShowShopModal(true)}
-                  disabled={tutorial.isActive}
-                  className={`flex-1 sm:flex-none flex items-center justify-center gap-1 px-2 py-1.5 sm:px-3 sm:py-2 rounded-lg text-xs sm:text-sm font-bold transition-colors whitespace-nowrap ${tutorial.isActive ? 'bg-slate-900 text-slate-600 cursor-not-allowed' : 'bg-blue-900/80 hover:bg-blue-800 text-blue-200 border border-blue-500 shadow-lg'}`}
-                >
-                  <ShoppingBag className="w-3 h-3 sm:w-4 sm:h-4" /> 상점
-                </button>
               </div>
             </div>
 
@@ -957,22 +989,36 @@ export default function PotionShopSim() {
                     const tutAllowedId = getTutorialAllowedIngredient();
                     const isTutTarget = tutorial.isActive && tutAllowedId === item.id;
                     const isTutDisabled = tutorial.isActive && tutAllowedId !== item.id && !isSelected;
+                    
+                    const availableQty = day === 1 ? '∞' : ingredientsQty[item.id];
+                    const outOfStock = day > 1 && ingredientsQty[item.id] <= 0;
 
                     return (
                       <button
                         key={item.id}
                         onClick={() => handleIngredientClick(item.id)}
-                        disabled={minigameResult !== null || brewPhase !== 'idle' || (!isItemTarget && !isSelected && !currentGuess.includes(null)) || (activeItemMode === 'hintIngredient' && isKnown) || isTutDisabled}
+                        disabled={minigameResult !== null || brewPhase !== 'idle' || (!isItemTarget && !isSelected && !currentGuess.includes(null)) || (activeItemMode === 'hintIngredient' && isKnown) || isTutDisabled || (outOfStock && !isSelected)}
                         className={`
                           relative p-1.5 sm:p-2 rounded-lg sm:rounded-xl flex flex-col items-center justify-center transition-all duration-300 border-2
                           ${isSelected && !activeItemMode ? 'bg-slate-700 border-purple-500 shadow-[0_0_10px_rgba(168,85,247,0.5)] transform scale-105' : 'bg-slate-900 border-slate-700'}
                           ${isItemTarget ? 'hover:border-indigo-400 hover:shadow-[0_0_10px_rgba(99,102,241,0.5)] cursor-crosshair' : ''}
-                          ${(!activeItemMode && !isSelected && !currentGuess.includes(null)) || isTutDisabled ? 'opacity-50 cursor-not-allowed' : 'hover:-translate-y-1'}
+                          ${outOfStock && !isSelected ? 'opacity-40 cursor-not-allowed grayscale' : (!activeItemMode && !isSelected && !currentGuess.includes(null)) || isTutDisabled ? 'opacity-50 cursor-not-allowed' : 'hover:-translate-y-1'}
                           ${isTutTarget ? 'ring-4 ring-indigo-400 animate-pulse border-indigo-400 bg-indigo-900/30' : ''}
                         `}
                       >
                         <span className="text-xl sm:text-2xl mb-0.5 sm:mb-1">{item.emoji}</span>
                         <span className="text-[8px] sm:text-[10px] text-center text-slate-300 leading-tight break-keep">{item.name}</span>
+                        
+                        {day > 1 && (
+                          <div className={`text-[8px] sm:text-[9px] font-bold mt-1 px-1.5 py-0.5 rounded ${outOfStock && !isSelected ? 'bg-red-900/80 text-red-300' : 'bg-slate-800 text-slate-300'}`}>
+                            {availableQty}개
+                          </div>
+                        )}
+                        {day === 1 && (
+                          <div className="text-[8px] sm:text-[9px] font-bold mt-1 px-1.5 py-0.5 rounded bg-slate-800 text-slate-300">
+                            ∞개
+                          </div>
+                        )}
                         
                         {isKnown && (
                           <div className="absolute -top-1 -right-1 sm:-top-2 sm:-right-2 bg-slate-800 rounded-full w-4 h-4 sm:w-6 sm:h-6 flex items-center justify-center border border-slate-600 shadow-lg text-[8px] sm:text-xs">
