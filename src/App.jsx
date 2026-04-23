@@ -310,12 +310,13 @@ export default function PotionShopSim() {
         name: villagerQuest.name,
         dialogue: villagerQuest.dialogue,
         potionName: villagerQuest.potionName,
-        slots: POTION_DB[villagerQuest.potionName].slots,
-        maxAttempts: POTION_DB[villagerQuest.potionName].maxAttempts,
-        baseReward: POTION_DB[villagerQuest.potionName].baseReward
+        slots: 3,
+        maxAttempts: 8,
+        baseReward: 35,
+        prescriptionCode: '#TUT0'
       });
       const extraQuest = ALL_QUESTS.find(q => q.type !== 'villager' && q.potionName !== '깊은 밤의 숙면 물약' && POTION_DB[q.potionName].slots <= 3);
-      queue.push({...extraQuest, id: 1, slots: 3, maxAttempts: 8, baseReward: 35});
+      queue.push({...extraQuest, id: 1, slots: 3, maxAttempts: 8, baseReward: 35, prescriptionCode: '#TEST'});
     } else {
       // 명성이 충분한 물약 퀘스트만 필터링
       let availableQuests = ALL_QUESTS.filter(q => POTION_DB[q.potionName].slots <= maxSlotsAllowed && POTION_DB[q.potionName].reqRep <= reputation)
@@ -344,7 +345,8 @@ export default function PotionShopSim() {
             potionName: quest.potionName,
             slots: potionInfo.slots,
             maxAttempts: potionInfo.maxAttempts,
-            baseReward: potionInfo.baseReward
+            baseReward: potionInfo.baseReward,
+            prescriptionCode: '#' + Math.random().toString(36).substring(2, 6).toUpperCase()
           });
         }
       }
@@ -943,7 +945,7 @@ export default function PotionShopSim() {
                   <FlaskConical className="w-5 h-5 sm:w-6 sm:h-6" /> 조제실
                 </h2>
                 <p className="text-[11px] sm:text-sm text-slate-400 mt-1 truncate max-w-[180px] sm:max-w-xs">
-                  {currentCustomer?.potionName}
+                  {currentCustomer?.potionName} <span className="text-purple-400 font-mono text-[9px] sm:text-xs bg-purple-900/40 px-1 py-0.5 sm:px-1.5 sm:py-0.5 rounded ml-1">{currentCustomer?.prescriptionCode}</span>
                 </p>
               </div>
               <p className="text-[10px] sm:text-sm text-red-400 font-semibold animate-pulse bg-red-900/30 px-2 py-1 sm:px-3 sm:py-1 rounded-full whitespace-nowrap">
@@ -951,50 +953,54 @@ export default function PotionShopSim() {
               </p>
             </div>
 
+            <div className="bg-slate-800 p-2 sm:p-3 rounded-xl border border-slate-700 flex flex-wrap gap-2 sm:gap-4 items-center shrink-0">
+              <span className="hidden sm:flex text-sm text-slate-400 font-bold items-center gap-1"><PackageOpen className="w-4 h-4"/> 도구함</span>
+              
+              {activeItemMode && (
+                <span className="w-full sm:w-auto text-center sm:text-left text-[10px] sm:text-xs text-blue-300 animate-pulse font-bold bg-blue-900/40 px-2 py-1 rounded mr-auto">
+                  {activeItemMode === 'hintIngredient' ? '감별할 재료 클릭!' : '투시할 칸 클릭!'}
+                </span>
+              )}
+
+              <div className="flex gap-1.5 sm:gap-2 w-full sm:w-auto ml-auto">
+                <button 
+                  onClick={() => setActiveItemMode(activeItemMode === 'hintIngredient' ? null : 'hintIngredient')}
+                  disabled={inventory.hintIngredient <= 0 || brewPhase !== 'idle' || tutorial.isActive}
+                  className={`flex-1 sm:flex-none flex items-center justify-center gap-1 sm:gap-2 px-2 py-1.5 sm:px-3 sm:py-2 rounded-lg text-xs sm:text-sm font-bold transition-all ${
+                    activeItemMode === 'hintIngredient' 
+                      ? 'bg-indigo-600 text-white shadow-[0_0_15px_rgba(79,70,229,0.8)]' 
+                      : inventory.hintIngredient > 0 && !tutorial.isActive ? 'bg-slate-700 hover:bg-slate-600 text-indigo-300' : 'bg-slate-900 text-slate-600 cursor-not-allowed'
+                  }`}
+                >
+                  <Search className="w-3 h-3 sm:w-4 sm:h-4" /> 돋보기 ({inventory.hintIngredient})
+                </button>
+
+                <button 
+                  onClick={() => setActiveItemMode(activeItemMode === 'hintSlot' ? null : 'hintSlot')}
+                  disabled={inventory.hintSlot <= 0 || brewPhase !== 'idle' || tutorial.isActive}
+                  className={`flex-1 sm:flex-none flex items-center justify-center gap-1 sm:gap-2 px-2 py-1.5 sm:px-3 sm:py-2 rounded-lg text-xs sm:text-sm font-bold transition-all ${
+                    activeItemMode === 'hintSlot' 
+                      ? 'bg-purple-600 text-white shadow-[0_0_15px_rgba(147,51,234,0.8)]' 
+                      : inventory.hintSlot > 0 && !tutorial.isActive ? 'bg-slate-700 hover:bg-slate-600 text-purple-300' : 'bg-slate-900 text-slate-600 cursor-not-allowed'
+                  }`}
+                >
+                  <Eye className="w-3 h-3 sm:w-4 sm:h-4" /> 구슬 ({inventory.hintSlot})
+                </button>
+
+                <button 
+                  onClick={() => setShowShopModal(true)}
+                  disabled={tutorial.isActive}
+                  className={`flex-1 sm:flex-none flex items-center justify-center gap-1 px-2 py-1.5 sm:px-3 sm:py-2 rounded-lg text-xs sm:text-sm font-bold transition-colors whitespace-nowrap ${tutorial.isActive ? 'bg-slate-900 text-slate-600 cursor-not-allowed' : 'bg-yellow-900/80 hover:bg-yellow-800 text-yellow-200 border border-yellow-500 shadow-lg'}`}
+                >
+                  <ShoppingBag className="w-3 h-3 sm:w-4 sm:h-4" /> 상점
+                </button>
+              </div>
+            </div>
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-2 sm:gap-6 shrink-0">
               <div className={`bg-slate-800 p-3 sm:p-4 rounded-xl border transition-all ${activeItemMode === 'hintIngredient' ? 'animate-pulse-glow' : 'border-slate-700'}`}>
-                <div className="flex flex-wrap justify-between items-center gap-2 mb-3 sm:mb-4">
-                  <div className="flex items-center gap-2">
-                    <h3 className="text-sm sm:text-lg font-semibold text-slate-200">재료 선반</h3>
-                    {activeItemMode && (
-                      <span className="text-[10px] sm:text-xs text-blue-300 animate-pulse font-bold bg-blue-900/40 px-2 py-1 rounded">
-                        {activeItemMode === 'hintIngredient' ? '감별할 재료 클릭!' : '투시할 칸 클릭!'}
-                      </span>
-                    )}
-                  </div>
-                  <div className="flex gap-1.5 sm:gap-2 w-full sm:w-auto">
-                    <button 
-                      onClick={() => setActiveItemMode(activeItemMode === 'hintIngredient' ? null : 'hintIngredient')}
-                      disabled={inventory.hintIngredient <= 0 || brewPhase !== 'idle' || tutorial.isActive}
-                      className={`flex-1 sm:flex-none flex items-center justify-center gap-1 sm:gap-2 px-2 py-1.5 sm:px-3 sm:py-1.5 rounded-lg text-xs sm:text-sm font-bold transition-all ${
-                        activeItemMode === 'hintIngredient' 
-                          ? 'bg-indigo-600 text-white shadow-[0_0_15px_rgba(79,70,229,0.8)]' 
-                          : inventory.hintIngredient > 0 && !tutorial.isActive ? 'bg-slate-700 hover:bg-slate-600 text-indigo-300' : 'bg-slate-900 text-slate-600 cursor-not-allowed'
-                      }`}
-                    >
-                      <Search className="w-3 h-3 sm:w-4 sm:h-4" /> 돋보기 ({inventory.hintIngredient})
-                    </button>
-
-                    <button 
-                      onClick={() => setActiveItemMode(activeItemMode === 'hintSlot' ? null : 'hintSlot')}
-                      disabled={inventory.hintSlot <= 0 || brewPhase !== 'idle' || tutorial.isActive}
-                      className={`flex-1 sm:flex-none flex items-center justify-center gap-1 sm:gap-2 px-2 py-1.5 sm:px-3 sm:py-1.5 rounded-lg text-xs sm:text-sm font-bold transition-all ${
-                        activeItemMode === 'hintSlot' 
-                          ? 'bg-purple-600 text-white shadow-[0_0_15px_rgba(147,51,234,0.8)]' 
-                          : inventory.hintSlot > 0 && !tutorial.isActive ? 'bg-slate-700 hover:bg-slate-600 text-purple-300' : 'bg-slate-900 text-slate-600 cursor-not-allowed'
-                      }`}
-                    >
-                      <Eye className="w-3 h-3 sm:w-4 sm:h-4" /> 구슬 ({inventory.hintSlot})
-                    </button>
-
-                    <button 
-                      onClick={() => setShowShopModal(true)}
-                      disabled={tutorial.isActive}
-                      className={`flex-1 sm:flex-none flex items-center justify-center gap-1 px-2 py-1.5 sm:px-3 sm:py-1.5 rounded-lg text-xs sm:text-sm font-bold transition-colors whitespace-nowrap ${tutorial.isActive ? 'bg-slate-900 text-slate-600 cursor-not-allowed' : 'bg-yellow-900/80 hover:bg-yellow-800 text-yellow-200 border border-yellow-500 shadow-lg'}`}
-                    >
-                      <ShoppingBag className="w-3 h-3 sm:w-4 sm:h-4" /> 상점
-                    </button>
-                  </div>
+                <div className="flex justify-between items-center mb-2 sm:mb-4">
+                  <h3 className="text-sm sm:text-lg font-semibold text-slate-200">재료 선반</h3>
                 </div>
                 <div className="grid grid-cols-5 md:grid-cols-5 gap-1 sm:gap-2">
                   {INGREDIENTS.map(item => {
