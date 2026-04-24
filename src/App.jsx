@@ -788,7 +788,7 @@ export default function App() {
 
   // 상단 상태 바: 현재 날짜·골드·명성 표시 및 자동저장 알림 (모든 화면에서 공통 렌더)
   const renderTopBar = () => (
-    <div className="flex items-center justify-between bg-slate-800 p-3 sm:p-4 rounded-xl border border-slate-700 shadow-md mb-4 sm:mb-6 relative z-20">
+    <div className="flex items-center justify-between bg-slate-800 p-3 sm:p-4 rounded-xl border border-slate-700 shadow-md mb-2 sm:mb-4 relative z-20 shrink-0">
       <div className="flex items-center gap-2 text-purple-300 font-bold text-lg sm:text-xl relative">
         <Store className="w-5 h-5 sm:w-6 sm:h-6" />
         <span>Day {day}</span>
@@ -817,7 +817,7 @@ export default function App() {
   // [start] 타이틀 화면: 게임 설명, 이어하기/새로 시작 버튼
   if (appState === 'start') {
     return (
-      <div className="min-h-[100dvh] bg-slate-900 flex flex-col items-center justify-center p-4">
+      <div className="h-[100svh] bg-slate-900 flex flex-col items-center justify-center p-4 overflow-y-auto">
         <div className="text-center space-y-4 sm:space-y-6 max-w-md w-full">
           <div className="flex justify-center mb-4 sm:mb-8">
             <div className="relative">
@@ -830,7 +830,7 @@ export default function App() {
           </h1>
           <p className="text-slate-400 leading-relaxed bg-slate-800 p-3 sm:p-4 rounded-lg border border-slate-700 text-xs sm:text-sm mb-6">
             손님들의 증상을 듣고 올바른 마법약을 처방한 뒤,<br/>
-            <span className="text-purple-300 font-bold">고정된 마법약 레시피</span>를 추리하여 완벽하게 조제하세요!<br/><br/>
+            <span className="text-purple-300 font-bold">마법약 레시피</span>를 추리하여 완벽하게 조제하세요!<br/><br/>
             조제에 성공하여 <span className="text-yellow-400 font-bold">명성이 오르면 새로운 물약이 해금</span>됩니다.<br/>
             오진하거나 조제에 실패하면 명성이 깎이며, 0이 되면 파산합니다.
           </p>
@@ -859,7 +859,7 @@ export default function App() {
   // [game_over] 파산 화면: 최종 날짜·골드 표시 및 재시작 버튼
   if (appState === 'game_over') {
     return (
-      <div className="min-h-[100dvh] bg-red-950 flex flex-col items-center justify-center p-4 text-center">
+      <div className="h-[100svh] bg-red-950 flex flex-col items-center justify-center p-4 text-center overflow-y-auto">
         <AlertCircle className="w-20 h-20 sm:w-24 sm:h-24 text-red-500 mb-4 sm:mb-6 animate-bounce" />
         <h1 className="text-3xl sm:text-4xl font-black text-red-400 mb-2 sm:mb-4">파산했습니다!</h1>
         <p className="text-red-200 mb-6 sm:mb-8 text-sm sm:text-lg">명성이 바닥에 떨어져 상점을 닫습니다...</p>
@@ -880,7 +880,7 @@ export default function App() {
 
   // [shop / minigame / day_end] 공통 레이아웃 래퍼
   return (
-    <div className="min-h-[100dvh] bg-slate-900 text-slate-100 p-2 sm:p-4 font-sans selection:bg-purple-500/30 flex flex-col">
+    <div className="h-[100svh] bg-slate-900 text-slate-100 p-2 sm:p-4 font-sans selection:bg-purple-500/30 flex flex-col overflow-hidden">
       <style>{`
         @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-4px); } 50% { transform: translateX(4px); } 75% { transform: translateX(-4px); } }
         .animate-shake { animation: shake 0.3s ease-in-out infinite; }
@@ -915,7 +915,7 @@ export default function App() {
         </div>
       )}
 
-      <div className="max-w-2xl mx-auto w-full relative overflow-hidden pb-2 sm:pb-4 flex-1 flex flex-col">
+      <div className="max-w-2xl mx-auto w-full relative flex-1 flex flex-col min-h-0">
         {renderTopBar()}
 
         {showShopModal && (
@@ -971,7 +971,7 @@ export default function App() {
 
         {/* [shop] 손님 응대 화면: 손님 입장 애니메이션, 대사 말풍선, 처방전 작성 패널 */}
         {appState === 'shop' && currentCustomer && (
-          <div className="bg-slate-900 rounded-t-3xl border-4 border-slate-700 flex-1 overflow-hidden relative shadow-2xl flex flex-col justify-end animate-in fade-in duration-500 min-h-[450px]">
+          <div className="bg-slate-900 rounded-t-3xl border-4 border-slate-700 flex-1 min-h-0 overflow-hidden relative shadow-2xl flex flex-col justify-end animate-in fade-in duration-500">
             <div className="absolute inset-0 bg-slate-800/50 flex justify-around p-4">
               <div className="w-1/4 h-24 sm:h-32 bg-slate-700 rounded-lg border-b-4 border-slate-800 mt-6 sm:mt-10 opacity-50"></div>
               <div className="w-1/4 h-24 sm:h-32 bg-slate-700 rounded-lg border-b-4 border-slate-800 mt-12 sm:mt-20 opacity-50"></div>
@@ -1035,7 +1035,7 @@ export default function App() {
                   </button>
                 </div>
               ) : (
-                <div className="bg-slate-800 border-t-4 border-slate-600 p-3 sm:p-5 animate-slide-up rounded-t-3xl max-h-[60vh] sm:max-h-[400px] overflow-y-auto custom-scrollbar shadow-[0_-10px_20px_rgba(0,0,0,0.3)]">
+                <div className="bg-slate-800 border-t-4 border-slate-600 p-3 sm:p-5 animate-slide-up rounded-t-3xl max-h-[42svh] sm:max-h-[380px] overflow-y-auto custom-scrollbar shadow-[0_-10px_20px_rgba(0,0,0,0.3)]">
                   <div className="flex justify-between items-center mb-3 sm:mb-4 sticky top-0 bg-slate-800 py-2 z-20">
                     <h3 className="text-white font-bold flex items-center gap-1 sm:gap-2 text-sm sm:text-lg"><ScrollText className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-400"/> 알맞은 약을 고르세요</h3>
                     <button onClick={() => setIsDiagnosing(false)} className="text-slate-400 hover:text-white bg-slate-700 p-1.5 rounded-lg transition-colors">
@@ -1071,7 +1071,7 @@ export default function App() {
 
         {/* [minigame] 재료 조합 화면: 도구함, 재료 선반, 가마솥 슬롯, 조합하기 버튼, 시도 기록 */}
         {appState === 'minigame' && (
-          <div className="flex flex-col flex-1 gap-3 sm:gap-5 h-full relative overflow-hidden pb-1">
+          <div className="flex flex-col flex-1 min-h-0 gap-2 sm:gap-3 overflow-y-auto pb-2">
             
             {minigameResult && (
               <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
@@ -1123,7 +1123,7 @@ export default function App() {
               </div>
             )}
 
-            <div className="bg-slate-800 p-2 sm:p-4 rounded-2xl border border-slate-700 flex flex-wrap gap-2 sm:gap-4 items-center shrink-0 shadow-sm">
+            <div className="bg-slate-800 p-2 sm:p-3 rounded-2xl border border-slate-700 flex flex-wrap gap-2 sm:gap-3 items-center shrink-0 shadow-sm">
               <span className="hidden sm:flex text-sm text-slate-400 font-bold items-center gap-1.5"><PackageOpen className="w-4 h-4"/> 도구함</span>
               
               {activeItemMode && (
@@ -1167,9 +1167,9 @@ export default function App() {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-2 sm:gap-6 shrink-0">
-              <div className={`bg-slate-800 p-3 sm:p-4 rounded-xl border transition-all ${activeItemMode === 'hintIngredient' ? 'animate-pulse-glow' : 'border-slate-700'}`}>
-                <div className="flex justify-between items-center mb-2 sm:mb-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2 sm:gap-3 shrink-0">
+              <div className={`bg-slate-800 p-2 sm:p-4 rounded-xl border transition-all ${activeItemMode === 'hintIngredient' ? 'animate-pulse-glow' : 'border-slate-700'}`}>
+                <div className="flex justify-between items-center mb-1 sm:mb-3">
                   <h3 className="text-sm sm:text-lg font-semibold text-slate-200">재료 선반</h3>
                 </div>
                 <div className="grid grid-cols-5 md:grid-cols-5 gap-1 sm:gap-2">
@@ -1187,7 +1187,7 @@ export default function App() {
                         onClick={() => handleIngredientClick(item.id)}
                         disabled={minigameResult !== null || brewPhase !== 'idle' || (!isItemTarget && !isSelected && !currentGuess.includes(null)) || (activeItemMode === 'hintIngredient' && isKnown) || isTutDisabled}
                         className={`
-                          relative p-2 sm:p-3 min-h-[64px] sm:min-h-[80px] rounded-xl flex flex-col items-center justify-center transition-all duration-300 border-2
+                          relative p-1.5 sm:p-3 min-h-[52px] sm:min-h-[72px] rounded-xl flex flex-col items-center justify-center transition-all duration-300 border-2
                           ${isSelected && !activeItemMode ? 'bg-slate-700 border-purple-500 shadow-[0_0_12px_rgba(168,85,247,0.5)] transform scale-105 z-10' : 'bg-slate-900 border-slate-700'}
                           ${isItemTarget ? 'hover:border-indigo-400 hover:shadow-[0_0_12px_rgba(99,102,241,0.5)] cursor-crosshair z-10' : ''}
                           ${(!activeItemMode && !isSelected && !currentGuess.includes(null)) || isTutDisabled ? 'opacity-40 cursor-not-allowed' : 'hover:-translate-y-1'}
@@ -1210,7 +1210,7 @@ export default function App() {
               </div>
 
               <div className={`
-                bg-slate-800 p-3 sm:p-6 rounded-xl border flex flex-col relative overflow-hidden transition-all duration-500
+                bg-slate-800 p-2 sm:p-5 rounded-xl border flex flex-col relative overflow-hidden transition-all duration-500
                 ${brewPhase === 'heating' ? 'border-orange-500 shadow-[0_0_30px_rgba(249,115,22,0.3)] animate-shake' : ''}
                 ${brewPhase === 'mixing' ? 'border-purple-500 shadow-[0_0_40px_rgba(168,85,247,0.5)] animate-pulse-fast bg-slate-700' : ''}
                 ${activeItemMode === 'hintSlot' ? 'animate-pulse-glow' : (!brewPhase || brewPhase === 'idle' ? 'border-slate-700' : '')}
@@ -1224,7 +1224,7 @@ export default function App() {
                   </div>
                 )}
 
-                <h3 className="text-sm sm:text-lg font-semibold text-slate-200 mb-2 sm:mb-4 text-center z-10 relative">투입된 재료 ({currentCustomer.slots}칸)
+                <h3 className="text-sm sm:text-lg font-semibold text-slate-200 mb-1 sm:mb-3 text-center z-10 relative">투입된 재료 ({currentCustomer.slots}칸)
                   {currentGuess.some(id => id !== null) && (
                     <span className="ml-2 text-xs text-red-400 font-normal">
                       {tutorial.isActive ? (
@@ -1243,7 +1243,7 @@ export default function App() {
                   )}
                 </h3>
                 
-                <div className="flex justify-center gap-2 sm:gap-4 mb-4 sm:mb-8 z-10 relative flex-1 items-center w-full">
+                <div className="flex justify-center gap-2 sm:gap-3 mb-2 sm:mb-5 z-10 relative flex-1 items-center w-full">
                   {Array.from({ length: currentCustomer?.slots || 3 }).map((_, index) => {
                     const guessId = currentGuess[index];
                     const item = guessId ? getIngredientDetails(guessId) : null;
@@ -1257,7 +1257,7 @@ export default function App() {
                         key={index} 
                         onClick={() => handleSlotClick(index, guessId)}
                         className={`
-                          relative w-12 h-12 sm:w-16 sm:h-16 md:w-20 md:h-20 shrink-0 rounded-full border-2 flex items-center justify-center text-2xl sm:text-4xl transition-all duration-300
+                          relative w-10 h-10 sm:w-14 sm:h-14 md:w-18 md:h-18 shrink-0 rounded-full border-2 flex items-center justify-center text-xl sm:text-3xl transition-all duration-300
                           ${item ? 'bg-slate-800 border-purple-400 shadow-[inset_0_0_15px_rgba(168,85,247,0.5)]' : 'bg-slate-900 border-slate-700 border-dashed'}
                           ${isItemTarget ? 'cursor-crosshair hover:border-purple-400 hover:shadow-[0_0_12px_rgba(168,85,247,0.5)]' : (item && !activeItemMode && !tutorial.isActive ? 'cursor-pointer hover:scale-105' : '')}
                           ${isSelectedEmptySlot && !tutorial.isActive ? 'border-blue-400 shadow-[0_0_12px_rgba(96,165,250,0.6)] animate-pulse cursor-pointer bg-blue-900/20' : (!item && !activeItemMode && !tutorial.isActive ? 'cursor-pointer hover:border-slate-500 hover:bg-slate-800/50' : '')}
@@ -1280,7 +1280,7 @@ export default function App() {
                   onClick={handleBrew}
                   disabled={currentGuess.includes(null) || minigameResult !== null || brewPhase !== 'idle' || activeItemMode !== null || (tutorial.isActive && !tutorial.step.startsWith('brew_'))}
                   className={`
-                    w-full py-3 sm:py-4 font-extrabold rounded-xl transition-all shadow-lg flex items-center justify-center gap-2 sm:gap-3 text-sm sm:text-lg z-10 relative
+                    w-full py-2.5 sm:py-4 font-extrabold rounded-xl transition-all shadow-lg flex items-center justify-center gap-2 sm:gap-3 text-sm sm:text-lg z-10 relative
                     ${(brewPhase !== 'idle' || activeItemMode || (tutorial.isActive && !tutorial.step.startsWith('brew_'))) ? 'bg-slate-600 text-slate-400 cursor-not-allowed' : 'bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white hover:shadow-[0_0_15px_rgba(168,85,247,0.4)]'}
                     ${tutorial.isActive && tutorial.step.startsWith('brew_') ? 'ring-4 ring-indigo-400 animate-pulse' : ''}
                   `}
@@ -1294,7 +1294,7 @@ export default function App() {
               </div>
             </div>
 
-            <div className="bg-slate-800 rounded-xl border border-slate-700 shadow-inner flex flex-col flex-1 min-h-[160px] overflow-hidden shrink-0 mt-1">
+            <div className="bg-slate-800 rounded-xl border border-slate-700 shadow-inner flex flex-col shrink-0 min-h-[100px] max-h-[28svh] overflow-hidden">
               <div className="bg-slate-800/80 border-b border-slate-700 p-2 text-[10px] sm:text-xs text-slate-300 flex items-center gap-3 justify-center z-10 shrink-0">
                 <Info className="w-3 h-3 text-slate-400 shrink-0"/>
                 <span className="flex items-center gap-1">
@@ -1347,17 +1347,17 @@ export default function App() {
 
         {/* [day_end] 하루 마감 화면: 판매 수익/재료비/유지비 정산 후 다음 날로 진행 */}
         {appState === 'day_end' && (
-          <div className="flex flex-col flex-1 gap-4 sm:gap-6 justify-center max-w-md mx-auto w-full animate-slide-up pb-6 px-2">
-            <div className="bg-slate-800 rounded-3xl border border-slate-700 shadow-2xl p-6 sm:p-8 relative overflow-hidden">
+          <div className="flex flex-col flex-1 min-h-0 gap-3 sm:gap-5 overflow-y-auto max-w-md mx-auto w-full animate-slide-up pb-4 px-2 pt-2">
+            <div className="bg-slate-800 rounded-3xl border border-slate-700 shadow-2xl p-4 sm:p-7 relative overflow-hidden">
               <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-indigo-500 to-purple-500"></div>
 
-              <div className="text-center mb-8 mt-2">
-                <ScrollText className="w-12 h-12 text-indigo-400 mx-auto mb-3" />
+              <div className="text-center mb-5 mt-1">
+                <ScrollText className="w-10 h-10 sm:w-12 sm:h-12 text-indigo-400 mx-auto mb-2" />
                 <h2 className="text-2xl font-black text-white mb-1">Day {day} 마감</h2>
                 <p className="text-slate-400 text-sm">오늘 하루의 영업 기록</p>
               </div>
 
-              <div className="space-y-3 mb-8">
+              <div className="space-y-2 mb-4">
                 <div className="flex justify-between items-center bg-slate-900/50 p-3 sm:p-4 rounded-xl border border-slate-700/50">
                   <span className="text-slate-300 font-semibold flex items-center gap-2 text-sm sm:text-base"><Coins className="w-4 h-4 text-yellow-400"/> 판매 수익</span>
                   <span className="text-yellow-400 font-bold text-base sm:text-lg">+{dailySalesRevenue} G</span>
@@ -1372,12 +1372,12 @@ export default function App() {
                 </div>
               </div>
 
-              <div className={`flex justify-between items-center p-4 sm:p-5 rounded-xl border-2 mb-8 ${netProfit >= 0 ? 'bg-green-900/20 border-green-500/50' : 'bg-red-900/20 border-red-500/50'}`}>
+              <div className={`flex justify-between items-center p-3 sm:p-5 rounded-xl border-2 mb-4 ${netProfit >= 0 ? 'bg-green-900/20 border-green-500/50' : 'bg-red-900/20 border-red-500/50'}`}>
                 <span className={`font-bold ${netProfit >= 0 ? 'text-green-400' : 'text-red-400'}`}>{netProfit >= 0 ? '순이익' : '순손실'}</span>
                 <span className={`font-black text-2xl ${netProfit >= 0 ? 'text-green-400' : 'text-red-400'}`}>{netProfit > 0 ? '+' : ''}{netProfit} G</span>
               </div>
 
-              <div className="flex justify-between items-center px-2 mb-8">
+              <div className="flex justify-between items-center px-2 mb-4">
                 <span className="text-slate-400 font-medium text-sm sm:text-base">최종 보유 자금</span>
                 <span className="text-white font-bold flex items-center gap-1.5 text-lg sm:text-xl"><Coins className="w-5 h-5 text-yellow-400"/> {money} G</span>
               </div>
