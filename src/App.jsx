@@ -20,7 +20,7 @@ import React, { useState, useEffect } from 'react';
 import {
   RotateCcw, FlaskConical, Sparkles, AlertCircle, Flame,
   Store, Coins, Star, Users, ArrowRight, BookOpen,
-  Search, Eye, ShoppingBag, X, PackageOpen, Target,
+  Search, Eye, ShoppingBag, X, Target,
   ScrollText, CheckCircle2, XCircle, Info, Save, Lock
 } from 'lucide-react';
 
@@ -1072,7 +1072,18 @@ export default function App() {
         {/* [minigame] 재료 조합 화면: 도구함, 재료 선반, 가마솥 슬롯, 조합하기 버튼, 시도 기록 */}
         {appState === 'minigame' && (
           <div className="flex flex-col flex-1 min-h-0 gap-2 sm:gap-3 overflow-y-auto pb-2">
-            
+
+            {/* 물약 이름 배너 (1순위) */}
+            <div className="bg-slate-800 px-3 py-2 sm:px-4 sm:py-2.5 rounded-xl border border-purple-700/60 flex items-center justify-between shrink-0 shadow-sm">
+              <div className="flex items-center gap-2 min-w-0">
+                <FlaskConical className="w-4 h-4 sm:w-5 sm:h-5 text-purple-400 shrink-0" />
+                <span className="text-sm sm:text-base font-bold text-white truncate">{currentCustomer?.potionName}</span>
+              </div>
+              <span className="text-xs text-slate-400 shrink-0 ml-2">
+                {history.length} / {currentCustomer?.maxAttempts} 시도
+              </span>
+            </div>
+
             {minigameResult && (
               <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
                 <div className={`bg-slate-800 border-2 rounded-2xl p-6 sm:p-8 max-w-sm w-full text-center space-y-4 sm:space-y-6 animate-in zoom-in-95 ${minigameResult.status === 'win' ? 'border-green-500 shadow-[0_0_40px_rgba(34,197,94,0.3)]' : 'border-red-500 shadow-[0_0_40px_rgba(239,68,68,0.3)]'}`}>
@@ -1123,54 +1134,60 @@ export default function App() {
               </div>
             )}
 
-            <div className="bg-slate-800 p-2 sm:p-3 rounded-2xl border border-slate-700 flex flex-wrap gap-2 sm:gap-3 items-center shrink-0 shadow-sm">
-              <span className="hidden sm:flex text-sm text-slate-400 font-bold items-center gap-1.5"><PackageOpen className="w-4 h-4"/> 도구함</span>
-              
-              {activeItemMode && (
-                <span className="w-full sm:w-auto text-center sm:text-left text-[11px] sm:text-sm text-blue-300 animate-pulse font-bold bg-blue-900/40 px-3 py-1.5 rounded-lg mr-auto border border-blue-800/50">
-                  {activeItemMode === 'hintIngredient' ? '감별할 재료 클릭!' : '투시할 칸 클릭!'}
-                </span>
-              )}
-
-              <div className="flex gap-2 w-full sm:w-auto ml-auto">
-                <button 
-                  onClick={() => setActiveItemMode(activeItemMode === 'hintIngredient' ? null : 'hintIngredient')}
-                  disabled={inventory.hintIngredient <= 0 || brewPhase !== 'idle' || tutorial.isActive}
-                  className={`flex-1 sm:flex-none flex items-center justify-center gap-1.5 sm:gap-2 px-2 py-2 sm:px-4 sm:py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all ${
-                    activeItemMode === 'hintIngredient' 
-                      ? 'bg-indigo-600 text-white shadow-[0_0_15px_rgba(79,70,229,0.8)]' 
-                      : inventory.hintIngredient > 0 && !tutorial.isActive ? 'bg-slate-700 hover:bg-slate-600 text-indigo-300' : 'bg-slate-900 text-slate-600 cursor-not-allowed'
-                  }`}
-                >
-                  <Search className="w-3 h-3 sm:w-4 sm:h-4" /> 돋보기 ({inventory.hintIngredient})
-                </button>
-
-                <button 
-                  onClick={() => setActiveItemMode(activeItemMode === 'hintSlot' ? null : 'hintSlot')}
-                  disabled={inventory.hintSlot <= 0 || brewPhase !== 'idle' || tutorial.isActive}
-                  className={`flex-1 sm:flex-none flex items-center justify-center gap-1.5 sm:gap-2 px-2 py-2 sm:px-4 sm:py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all ${
-                    activeItemMode === 'hintSlot' 
-                      ? 'bg-purple-600 text-white shadow-[0_0_15px_rgba(147,51,234,0.8)]' 
-                      : inventory.hintSlot > 0 && !tutorial.isActive ? 'bg-slate-700 hover:bg-slate-600 text-purple-300' : 'bg-slate-900 text-slate-600 cursor-not-allowed'
-                  }`}
-                >
-                  <Eye className="w-3 h-3 sm:w-4 sm:h-4" /> 구슬 ({inventory.hintSlot})
-                </button>
-
-                <button 
-                  onClick={() => setShowShopModal(true)}
-                  disabled={tutorial.isActive}
-                  className={`flex-1 sm:flex-none flex items-center justify-center gap-1 px-2 py-2 sm:px-4 sm:py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-colors whitespace-nowrap ${tutorial.isActive ? 'bg-slate-900 text-slate-600 cursor-not-allowed' : 'bg-yellow-900/80 hover:bg-yellow-800 text-yellow-200 border border-yellow-500 shadow-lg'}`}
-                >
-                  <ShoppingBag className="w-3 h-3 sm:w-4 sm:h-4" /> 상점
-                </button>
-              </div>
-            </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-2 sm:gap-3 shrink-0">
               <div className={`bg-slate-800 p-2 sm:p-4 rounded-xl border transition-all ${activeItemMode === 'hintIngredient' ? 'animate-pulse-glow' : 'border-slate-700'}`}>
                 <div className="flex justify-between items-center mb-1 sm:mb-3">
                   <h3 className="text-sm sm:text-lg font-semibold text-slate-200">재료 선반</h3>
+                  <div className="flex items-center gap-1">
+                    {activeItemMode && (
+                      <span className="text-[10px] text-blue-300 font-bold animate-pulse mr-0.5">
+                        {activeItemMode === 'hintIngredient' ? '감별할 재료 클릭!' : '투시할 칸 클릭!'}
+                      </span>
+                    )}
+                    <button
+                      onClick={() => setActiveItemMode(activeItemMode === 'hintIngredient' ? null : 'hintIngredient')}
+                      disabled={inventory.hintIngredient <= 0 || brewPhase !== 'idle' || tutorial.isActive}
+                      title={`재료 감별 돋보기 (${inventory.hintIngredient}개)`}
+                      className={`relative p-1.5 rounded-lg transition-all ${
+                        activeItemMode === 'hintIngredient'
+                          ? 'bg-indigo-600 text-white shadow-[0_0_10px_rgba(79,70,229,0.8)]'
+                          : inventory.hintIngredient > 0 && !tutorial.isActive
+                          ? 'bg-slate-700 hover:bg-slate-600 text-indigo-300'
+                          : 'bg-slate-900 text-slate-600 cursor-not-allowed'
+                      }`}
+                    >
+                      <Search className="w-3.5 h-3.5" />
+                      {inventory.hintIngredient > 0 && (
+                        <span className="absolute -top-1 -right-1 bg-indigo-500 text-white text-[8px] w-3.5 h-3.5 rounded-full flex items-center justify-center font-bold leading-none">{inventory.hintIngredient}</span>
+                      )}
+                    </button>
+                    <button
+                      onClick={() => setActiveItemMode(activeItemMode === 'hintSlot' ? null : 'hintSlot')}
+                      disabled={inventory.hintSlot <= 0 || brewPhase !== 'idle' || tutorial.isActive}
+                      title={`슬롯 투시 구슬 (${inventory.hintSlot}개)`}
+                      className={`relative p-1.5 rounded-lg transition-all ${
+                        activeItemMode === 'hintSlot'
+                          ? 'bg-purple-600 text-white shadow-[0_0_10px_rgba(147,51,234,0.8)]'
+                          : inventory.hintSlot > 0 && !tutorial.isActive
+                          ? 'bg-slate-700 hover:bg-slate-600 text-purple-300'
+                          : 'bg-slate-900 text-slate-600 cursor-not-allowed'
+                      }`}
+                    >
+                      <Eye className="w-3.5 h-3.5" />
+                      {inventory.hintSlot > 0 && (
+                        <span className="absolute -top-1 -right-1 bg-purple-500 text-white text-[8px] w-3.5 h-3.5 rounded-full flex items-center justify-center font-bold leading-none">{inventory.hintSlot}</span>
+                      )}
+                    </button>
+                    <button
+                      onClick={() => setShowShopModal(true)}
+                      disabled={tutorial.isActive}
+                      title="도구 상점"
+                      className={`p-1.5 rounded-lg transition-colors ${tutorial.isActive ? 'bg-slate-900 text-slate-600 cursor-not-allowed' : 'bg-yellow-900/60 hover:bg-yellow-800 text-yellow-300 border border-yellow-600/40'}`}
+                    >
+                      <ShoppingBag className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
                 </div>
                 <div className="grid grid-cols-5 md:grid-cols-5 gap-1 sm:gap-2">
                   {INGREDIENTS.map(item => {
