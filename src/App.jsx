@@ -86,6 +86,9 @@ const POTION_DB = {
 // reqRep 오름차순으로 정렬된 물약 이름 목록 (처방전 UI에 표시)
 const POTION_CATALOG = Object.keys(POTION_DB).sort((a, b) => POTION_DB[a].reqRep - POTION_DB[b].reqRep);
 
+// 재료 중 가장 저렴한 단가 — 골드가 이 값 미만이면 조합 자체가 불가하므로 파산 처리
+const MIN_INGREDIENT_COST = Math.min(...INGREDIENTS.map(i => i.cost));
+
 // ─────────────────────────────────────────────
 // 손님 데이터: 각 손님 유형(type)별 퀘스트(요청) 목록
 //   dialogue: 손님이 직접 증상/원하는 효과를 설명하는 대사 (물약 이름을 직접 언급하지 않음)
@@ -262,6 +265,8 @@ export default function App() {
   const [appState, setAppState] = useState('start');
   const [hasSaveData, setHasSaveData] = useState(false); // localStorage에 저장 데이터 존재 여부
   const [saveIndicator, setSaveIndicator] = useState(false); // "자동 저장됨" 알림 표시 여부
+  const [hasUsedLoan, setHasUsedLoan] = useState(false); // 긴급 대출 사용 여부
+  const [pendingRoute, setPendingRoute] = useState(null); // 대출 후 이동할 경로 ('next_customer' | 'next_day')
 
   // ── 튜토리얼 상태 ──────────────────────────────────────────────────
   // tutorial.step: 튜토리얼 진행 단계 ('intro_1', 'guess_1_1', 'brew_1' 등)
@@ -312,7 +317,7 @@ export default function App() {
   // shop 또는 day_end 상태 진입 시마다 현재 진행 상황을 자동 저장하고 2초간 알림 표시
   useEffect(() => {
     if (appState === 'shop' || appState === 'day_end') {
-      const saveData = { day, money, reputation, inventory, dailyCustomers, currentCustomerIndex };
+      const saveData = { day, money, reputation, inventory, dailyCustomers, currentCustomerIndex, hasUsedLoan };
       localStorage.setItem(SAVE_KEY, JSON.stringify(saveData));
       setHasSaveData(true);
 
@@ -320,7 +325,7 @@ export default function App() {
       const timer = setTimeout(() => setSaveIndicator(false), 2000);
       return () => clearTimeout(timer);
     }
-  }, [appState, day, money, reputation, inventory, dailyCustomers, currentCustomerIndex]);
+  }, [appState, day, money, reputation, inventory, dailyCustomers, currentCustomerIndex, hasUsedLoan]);
 
   // localStorage에 저장된 이전 게임 상태를 불러와 shop 화면으로 진입
   const loadGame = () => {
@@ -333,6 +338,7 @@ export default function App() {
       setInventory(data.inventory);
       setDailyCustomers(data.dailyCustomers || []);
       setCurrentCustomerIndex(data.currentCustomerIndex || 0);
+      setHasUsedLoan(data.hasUsedLoan || false);
       setAppState('shop');
     }
   };
@@ -344,6 +350,7 @@ export default function App() {
     setMoney(50);
     setReputation(50);
     setInventory({ hintIngredient: 0, hintSlot: 0 });
+    setHasUsedLoan(false);
     startNewDay(1, null);
   };
 
@@ -623,8 +630,9 @@ export default function App() {
     }, 0);
 
     // 튜토리얼 중에는 골드 차감 면제
+    const newMoney = tutorial.isActive ? money : money - brewCost;
     if (!tutorial.isActive) {
-      setMoney(prev => prev - brewCost);
+      setMoney(newMoney);
       setDailyIngredientCost(prev => prev + brewCost);
     }
 
@@ -665,6 +673,9 @@ export default function App() {
           if (perfect === currentCustomer.slots) {
             finishOrder(true, newHistory.length);
           } else if (newHistory.length >= currentCustomer.maxAttempts) {
+            finishOrder(false, newHistory.length);
+          } else if (newMoney < MIN_INGREDIENT_COST) {
+            // 골드가 가장 저렴한 재료도 살 수 없을 만큼 부족 — 더 이상 조합 불가
             finishOrder(false, newHistory.length);
           }
         }
@@ -708,7 +719,8 @@ export default function App() {
     }
 
     const newReputation = reputation + minigameResult.earnedRep;
-    setMoney(prev => prev + minigameResult.earnedMoney);
+    const newMoney = money + minigameResult.earnedMoney;
+    setMoney(newMoney);
     setReputation(newReputation);
     if (minigameResult.earnedMoney > 0) {
       setDailySalesRevenue(prev => prev + minigameResult.earnedMoney);
@@ -718,6 +730,15 @@ export default function App() {
       setAppState('game_over');
       localStorage.removeItem(SAVE_KEY);
       setHasSaveData(false);
+    } else if (newMoney < MIN_INGREDIENT_COST) {
+      if (!hasUsedLoan) {
+        setPendingRoute('next_customer');
+        setAppState('loan_event');
+      } else {
+        setAppState('game_over');
+        localStorage.removeItem(SAVE_KEY);
+        setHasSaveData(false);
+      }
     } else {
       moveToNextCustomer();
     }
@@ -858,19 +879,86 @@ export default function App() {
 
   // [game_over] 파산 화면: 최종 날짜·골드 표시 및 재시작 버튼
   if (appState === 'game_over') {
+    let gameOverMessage = "명성이 바닥에 떨어져 상점 문을 닫습니다...";
+    if (money < 0) {
+      gameOverMessage = "상점 유지비를 내지 못해 쫓겨났습니다...";
+    } else if (reputation > 0 && money < MIN_INGREDIENT_COST) {
+      gameOverMessage = "재료를 살 돈조차 남아있지 않아 파산했습니다...";
+    }
+
     return (
-      <div className="h-[100svh] bg-red-950 flex flex-col items-center justify-center p-4 text-center overflow-y-auto">
-        <AlertCircle className="w-20 h-20 sm:w-24 sm:h-24 text-red-500 mb-4 sm:mb-6 animate-bounce" />
-        <h1 className="text-3xl sm:text-4xl font-black text-red-400 mb-2 sm:mb-4">파산했습니다!</h1>
-        <p className="text-red-200 mb-6 sm:mb-8 text-sm sm:text-lg">명성이 바닥에 떨어져 상점을 닫습니다...</p>
-        <div className="bg-slate-900 p-4 sm:p-6 rounded-xl border border-slate-700 mb-6 sm:mb-8 w-56 sm:w-64">
-          <p className="text-slate-400 mb-1 sm:mb-2 text-sm sm:text-base">최종 기록</p>
-          <p className="text-xl sm:text-2xl font-bold text-white">Day {day}</p>
-          <p className="text-lg sm:text-xl font-bold text-yellow-400 mt-1 sm:mt-2">{money} G</p>
+      <div className="h-[100svh] bg-slate-900 flex flex-col items-center justify-center p-4 text-center overflow-y-auto">
+        <div className="bg-slate-800 border-2 border-red-500/50 rounded-3xl p-8 sm:p-10 max-w-md w-full shadow-[0_0_50px_rgba(239,68,68,0.2)] relative overflow-hidden animate-in zoom-in duration-500">
+          <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-red-600 to-red-400"></div>
+          
+          <div className="flex justify-center mb-6">
+            <div className="relative">
+              <AlertCircle className="w-20 h-20 sm:w-24 sm:h-24 text-red-500 animate-pulse" />
+            </div>
+          </div>
+          
+          <h1 className="text-3xl sm:text-4xl font-black text-white mb-3 tracking-tight">파산했습니다</h1>
+          <p className="text-slate-400 mb-8 text-sm sm:text-base bg-slate-900/50 p-3 rounded-lg border border-slate-700/50">
+            {gameOverMessage}
+          </p>
+          
+          <div className="grid grid-cols-2 gap-4 mb-8">
+            <div className="bg-slate-900 p-4 rounded-2xl border border-slate-700 flex flex-col items-center justify-center">
+              <span className="text-slate-500 text-xs sm:text-sm font-bold mb-1">최종 생존</span>
+              <span className="text-2xl sm:text-3xl font-black text-white">Day {day}</span>
+            </div>
+            <div className="bg-slate-900 p-4 rounded-2xl border border-slate-700 flex flex-col items-center justify-center">
+              <span className="text-slate-500 text-xs sm:text-sm font-bold mb-1">남은 자금</span>
+              <span className="text-2xl sm:text-3xl font-black text-yellow-400 flex items-center gap-1">
+                {money} <Coins className="w-4 h-4 sm:w-5 sm:h-5"/>
+              </span>
+            </div>
+          </div>
+          
+          <button 
+            onClick={startGame} 
+            className="w-full py-4 bg-red-600 hover:bg-red-500 text-white font-bold rounded-xl shadow-[0_0_20px_rgba(220,38,38,0.4)] transition-all transform hover:scale-[1.02] flex items-center justify-center gap-2 text-base sm:text-lg"
+          >
+            <RotateCcw className="w-5 h-5 sm:w-6 sm:h-6"/> 처음부터 다시 시작
+          </button>
         </div>
-        <button onClick={startGame} className="px-6 py-3 sm:px-8 sm:py-3 bg-red-600 hover:bg-red-500 text-white font-bold rounded-lg flex items-center gap-2 text-sm sm:text-base">
-          <RotateCcw className="w-4 h-4 sm:w-5 sm:h-5"/> 처음부터 다시 시작
-        </button>
+      </div>
+    );
+  }
+
+  // [loan_event] 긴급 구제 금융 화면: 자금 부족 시 마지막 1회 대출 제공
+  if (appState === 'loan_event') {
+    return (
+      <div className="h-[100svh] bg-slate-900 flex flex-col items-center justify-center p-4 text-center overflow-y-auto">
+        <div className="bg-slate-800 border-2 border-amber-500/50 rounded-3xl p-8 sm:p-10 max-w-md w-full shadow-[0_0_50px_rgba(245,158,11,0.2)] relative overflow-hidden animate-in zoom-in duration-500">
+          <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-amber-600 to-yellow-400"></div>
+          <div className="flex justify-center mb-6">
+            <div className="relative">
+              <Coins className="w-20 h-20 sm:w-24 sm:h-24 text-amber-500 animate-bounce" />
+            </div>
+          </div>
+          <h1 className="text-2xl sm:text-3xl font-black text-white mb-3 tracking-tight">상인 길드의 구제 금융</h1>
+          <p className="text-slate-300 mb-6 text-sm sm:text-base leading-relaxed bg-slate-900/50 p-3 rounded-lg border border-slate-700/50">
+            자금이 바닥났군요! 하지만 상점의 잠재력을 본 길드에서 <span className="text-yellow-400 font-bold">마지막으로 50G</span>를 대출해 주기로 했습니다.
+          </p>
+          <div className="bg-slate-900 p-4 rounded-xl border border-slate-700 flex justify-between items-center mb-8">
+            <span className="text-slate-400 font-bold">대출 후 보유 자금</span>
+            <span className="text-2xl font-black text-yellow-400 flex items-center gap-1">
+              {money + 50} <Coins className="w-5 h-5"/>
+            </span>
+          </div>
+          <button
+            onClick={() => {
+              setHasUsedLoan(true);
+              setMoney(prev => prev + 50);
+              if (pendingRoute === 'next_customer') moveToNextCustomer();
+              else if (pendingRoute === 'next_day') startNewDay(day + 1, dailyCustomers[dailyCustomers.length - 1].type);
+            }}
+            className="w-full py-4 bg-amber-600 hover:bg-amber-500 text-white font-bold rounded-xl shadow-[0_0_20px_rgba(217,119,6,0.4)] transition-all transform hover:scale-[1.02] flex items-center justify-center gap-2 text-base sm:text-lg"
+          >
+            50G 받고 재도전하기
+          </button>
+        </div>
       </div>
     );
   }
@@ -1295,10 +1383,10 @@ export default function App() {
                 
                 <button
                   onClick={handleBrew}
-                  disabled={currentGuess.includes(null) || minigameResult !== null || brewPhase !== 'idle' || activeItemMode !== null || (tutorial.isActive && !tutorial.step.startsWith('brew_'))}
+                  disabled={currentGuess.includes(null) || minigameResult !== null || brewPhase !== 'idle' || activeItemMode !== null || (tutorial.isActive && !tutorial.step.startsWith('brew_')) || (!tutorial.isActive && currentGuess.reduce((s, id) => s + (INGREDIENTS.find(i => i.id === id)?.cost ?? 0), 0) > money)}
                   className={`
                     w-full py-2.5 sm:py-4 font-extrabold rounded-xl transition-all shadow-lg flex items-center justify-center gap-2 sm:gap-3 text-sm sm:text-lg z-10 relative
-                    ${(brewPhase !== 'idle' || activeItemMode || (tutorial.isActive && !tutorial.step.startsWith('brew_'))) ? 'bg-slate-600 text-slate-400 cursor-not-allowed' : 'bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white hover:shadow-[0_0_15px_rgba(168,85,247,0.4)]'}
+                    ${(brewPhase !== 'idle' || activeItemMode || (tutorial.isActive && !tutorial.step.startsWith('brew_')) || (!tutorial.isActive && currentGuess.reduce((s, id) => s + (INGREDIENTS.find(i => i.id === id)?.cost ?? 0), 0) > money)) ? 'bg-slate-600 text-slate-400 cursor-not-allowed' : 'bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white hover:shadow-[0_0_15px_rgba(168,85,247,0.4)]'}
                     ${tutorial.isActive && tutorial.step.startsWith('brew_') ? 'ring-4 ring-indigo-400 animate-pulse' : ''}
                   `}
                 >
@@ -1364,39 +1452,47 @@ export default function App() {
 
         {/* [day_end] 하루 마감 화면: 판매 수익/재료비/유지비 정산 후 다음 날로 진행 */}
         {appState === 'day_end' && (
-          <div className="flex flex-col flex-1 min-h-0 gap-3 sm:gap-5 overflow-y-auto max-w-md mx-auto w-full animate-slide-up pb-4 px-2 pt-2">
-            <div className="bg-slate-800 rounded-3xl border border-slate-700 shadow-2xl p-4 sm:p-7 relative overflow-hidden">
-              <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-indigo-500 to-purple-500"></div>
+          <div className="flex flex-col flex-1 min-h-0 gap-3 sm:gap-5 overflow-y-auto max-w-md mx-auto w-full animate-slide-up pb-4 px-2 pt-2 justify-center">
+            <div className="bg-slate-800 rounded-3xl border border-slate-700 shadow-[0_0_40px_rgba(0,0,0,0.5)] p-5 sm:p-8 relative overflow-hidden">
+              <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500"></div>
 
-              <div className="text-center mb-5 mt-1">
-                <ScrollText className="w-10 h-10 sm:w-12 sm:h-12 text-indigo-400 mx-auto mb-2" />
-                <h2 className="text-2xl font-black text-white mb-1">Day {day} 마감</h2>
-                <p className="text-slate-400 text-sm">오늘 하루의 영업 기록</p>
+              <div className="text-center mb-6 sm:mb-8 mt-2">
+                <div className="inline-flex items-center justify-center w-16 h-16 sm:w-20 sm:h-20 bg-indigo-900/50 rounded-2xl border border-indigo-500/30 mb-4 transform rotate-3">
+                  <ScrollText className="w-8 h-8 sm:w-10 sm:h-10 text-indigo-400 -rotate-3" />
+                </div>
+                <h2 className="text-2xl sm:text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-indigo-300 to-purple-300 mb-2">Day {day} 마감 정산</h2>
+                <p className="text-slate-400 text-sm">오늘 하루의 상점 영업 기록입니다.</p>
               </div>
 
-              <div className="space-y-2 mb-4">
-                <div className="flex justify-between items-center bg-slate-900/50 p-3 sm:p-4 rounded-xl border border-slate-700/50">
-                  <span className="text-slate-300 font-semibold flex items-center gap-2 text-sm sm:text-base"><Coins className="w-4 h-4 text-yellow-400"/> 판매 수익</span>
+              <div className="space-y-3 mb-6 bg-slate-900/60 p-4 sm:p-5 rounded-2xl border border-slate-700/50">
+                <div className="flex justify-between items-center">
+                  <span className="text-slate-300 font-medium flex items-center gap-2 text-sm sm:text-base"><Coins className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-400"/> 판매 수익</span>
                   <span className="text-yellow-400 font-bold text-base sm:text-lg">+{dailySalesRevenue} G</span>
                 </div>
-                <div className="flex justify-between items-center bg-slate-900/50 p-3 sm:p-4 rounded-xl border border-slate-700/50">
-                  <span className="text-slate-300 font-semibold flex items-center gap-2 text-sm sm:text-base"><FlaskConical className="w-4 h-4 text-red-400"/> 재료비</span>
+                <div className="flex justify-between items-center">
+                  <span className="text-slate-300 font-medium flex items-center gap-2 text-sm sm:text-base"><FlaskConical className="w-4 h-4 sm:w-5 sm:h-5 text-red-400"/> 재료 비용</span>
                   <span className="text-red-400 font-bold text-base sm:text-lg">-{dailyIngredientCost} G</span>
                 </div>
-                <div className="flex justify-between items-center bg-slate-900/50 p-3 sm:p-4 rounded-xl border border-slate-700/50">
-                  <span className="text-slate-300 font-semibold flex items-center gap-2 text-sm sm:text-base"><Store className="w-4 h-4 text-orange-400"/> 상점 유지비</span>
+                <div className="flex justify-between items-center">
+                  <span className="text-slate-300 font-medium flex items-center gap-2 text-sm sm:text-base"><Store className="w-4 h-4 sm:w-5 sm:h-5 text-orange-400"/> 상점 유지비</span>
                   <span className="text-orange-400 font-bold text-base sm:text-lg">-{DAILY_RENT} G</span>
+                </div>
+                
+                <div className="w-full h-px bg-slate-700/50 my-3"></div>
+                
+                <div className="flex justify-between items-center">
+                  <span className={`font-bold text-base sm:text-lg ${netProfit >= 0 ? 'text-green-400' : 'text-red-400'}`}>{netProfit >= 0 ? '오늘의 순이익' : '오늘의 순손실'}</span>
+                  <span className={`font-black text-xl sm:text-2xl ${netProfit >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                    {netProfit > 0 ? '+' : ''}{netProfit} G
+                  </span>
                 </div>
               </div>
 
-              <div className={`flex justify-between items-center p-3 sm:p-5 rounded-xl border-2 mb-4 ${netProfit >= 0 ? 'bg-green-900/20 border-green-500/50' : 'bg-red-900/20 border-red-500/50'}`}>
-                <span className={`font-bold ${netProfit >= 0 ? 'text-green-400' : 'text-red-400'}`}>{netProfit >= 0 ? '순이익' : '순손실'}</span>
-                <span className={`font-black text-2xl ${netProfit >= 0 ? 'text-green-400' : 'text-red-400'}`}>{netProfit > 0 ? '+' : ''}{netProfit} G</span>
-              </div>
-
-              <div className="flex justify-between items-center px-2 mb-4">
-                <span className="text-slate-400 font-medium text-sm sm:text-base">최종 보유 자금</span>
-                <span className="text-white font-bold flex items-center gap-1.5 text-lg sm:text-xl"><Coins className="w-5 h-5 text-yellow-400"/> {money} G</span>
+              <div className="flex justify-between items-center bg-slate-700/30 p-4 rounded-xl border border-slate-600/50 mb-6">
+                <span className="text-slate-300 font-medium">최종 보유 자금</span>
+                <span className="text-white font-black flex items-center gap-2 text-xl sm:text-2xl">
+                  {money} <Coins className="w-5 h-5 sm:w-6 sm:h-6 text-yellow-400"/>
+                </span>
               </div>
 
               <button
@@ -1406,11 +1502,25 @@ export default function App() {
                     setHasSeenTutorial(true);
                     localStorage.setItem(TUTORIAL_KEY, 'true');
                   }
-                  setMoney(prev => prev - DAILY_RENT);
-                  startNewDay(day + 1, dailyCustomers[dailyCustomers.length - 1].type);
+                  
+                  const nextMoney = money - DAILY_RENT;
+                  setMoney(nextMoney);
+                  
+                  if (nextMoney < 0 || (reputation > 0 && nextMoney < MIN_INGREDIENT_COST)) {
+                    if (!hasUsedLoan && reputation > 0) {
+                      setPendingRoute('next_day');
+                      setAppState('loan_event');
+                    } else {
+                      setAppState('game_over');
+                      localStorage.removeItem(SAVE_KEY);
+                      setHasSaveData(false);
+                    }
+                  } else {
+                    startNewDay(day + 1, dailyCustomers[dailyCustomers.length - 1].type);
+                  }
                 }}
                 disabled={tutorial.isActive && tutorial.step !== 'day_end_3'}
-                className={`w-full py-4 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl transition-all shadow-[0_4px_0_rgba(67,56,202,1)] hover:translate-y-[2px] hover:shadow-[0_2px_0_rgba(67,56,202,1)] flex items-center justify-center gap-2 text-base sm:text-lg disabled:opacity-50 disabled:cursor-not-allowed ${tutorial.isActive && tutorial.step === 'day_end_3' ? 'ring-4 ring-indigo-400 animate-pulse' : ''}`}
+                className={`w-full py-4 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl shadow-[0_0_20px_rgba(79,70,229,0.4)] transition-all transform hover:scale-[1.02] flex items-center justify-center gap-2 text-base sm:text-lg disabled:opacity-50 disabled:cursor-not-allowed ${tutorial.isActive && tutorial.step === 'day_end_3' ? 'ring-4 ring-indigo-400 animate-pulse' : ''}`}
               >
                 다음 날 시작하기 <ArrowRight className="w-5 h-5"/>
               </button>
