@@ -107,7 +107,7 @@ const CUSTOMER_DATA = [
       { dialogue: "낫질 한 번 잘못했다가 발등을 크게 찍었소. 상처가 아물 기미가 안 보이니, 이거 큰일 아니오?", potionName: "신속의 치유 물약" },
       { dialogue: "밭에 지독한 해충들이 꼬여서 농사를 다 망치게 생겼소. 놈들이 기절할 만큼 독한 냄새를 좀 풍겨야겠소.", potionName: "맹독성 가스 물약" },
       { dialogue: "올해는 어째 씨를 뿌려도 흉조만 찾아드니... 지푸라기라도 잡는 심정으로 하늘의 운이라도 빌려보고 싶소.", potionName: "행운의 네잎클로버 물약" },
-      { dialogue: "마을에 원인 모를 역병이 돌아 사람들이 죽어 나가고 있소. 어떤 병마도 씻어낼 전설의 약이라도 필요하오.", potionName: "만병통치약" }
+      { dialogue: "마 마을에 원인 모를 역병이 돌아 사람들이 죽어 나가고 있소. 어떤 병마도 씻어낼 전설의 약이라도 필요하오.", potionName: "만병통치약" }
     ]
   },
   {
@@ -290,7 +290,7 @@ const generateDailyEvent = (day, reputation) => {
     { weight: 8, type: 'global_tip', multiplier: 2.0, title: '🎉 마을 대축제', message: `축제로 마을 사람들이 들떠있습니다. 오늘 획득하는 모든 팁이 2배가 됩니다!` },
     { weight: 8, type: 'expensive_ingredients_cost', multiplier: 2.0, title: '📜 왕실 규제령', message: `사치품 통제로 인해 단가가 높은(6G 이상) 고급 재료들의 가격이 2배로 폭등합니다.` },
     { weight: 8, type: 'potion_group_reward', targets: ['거인의 힘 물약', '용의 숨결 물약', '신속의 치유 물약', '올빼미의 시야 물약'], multiplier: 2.0, title: '⚔️ 전쟁의 전조', message: `군수 물자 확보를 위해 기사단에서 [전투 및 버프 관련 물약]들을 2배의 가격에 매입합니다.` },
-    { weight: 8, type: 'potion_group_reward', targets: ['깊은 밤의 숙면 물약', '신속의 치유 물약', '만병통치약'], multiplier: 1.5, title: '🤧 지독한 독감 유행', message: `마을에 독감이 돌고 있습니다. [치유 및 수면 관련 물약]의 수요가 급증하여 보수가 1.5배가 됩니다.` },
+    { weight: 8, type: 'potion_group_reward', targets: ['깊은 밤의 숙면 물약', '신속의 치유 물약', '만병통치약'], multiplier: 1.5, title: '🤧 지독한 독감 유행', message: `마 마을에 독감이 돌고 있습니다. [치유 및 수면 관련 물약]의 수요가 급증하여 보수가 1.5배가 됩니다.` },
     { weight: 8, type: 'smuggler', costMultiplier: 0.5, repMultiplier: 0.5, title: '🏴‍☠️ 밀수업자의 방문', message: `출처를 알 수 없는 저렴한 재료가 들어왔습니다. 오늘 재료비는 반값이지만, 질이 떨어져 획득 명성도 반토막 납니다.` },
     { weight: 8, type: 'critic_day', repMultiplier: 2.0, repPenaltyMultiplier: 2.0, title: '🧐 비평가의 순회일', message: `깐깐하기로 소문난 비평가들이 방문합니다. 조제 성공 시 명성을 2배로 얻지만, 실수(거절/오진/실패) 시 명성도 2배로 깎입니다!` },
     { weight: 8, type: 'free_hints', title: '🌠 유성우 내리는 밤', message: `충만한 마력 덕분에 도구 상점의 힌트 아이템(돋보기, 구슬) 가격이 오늘 하루 전면 무료(0G)가 됩니다!` },
@@ -402,6 +402,34 @@ export default function App() {
 
   // 이벤트에 따른 변동형 임대료
   const currentRent = currentEvent?.type === 'rent_override' ? currentEvent.rent : DAILY_RENT_BASE;
+
+  // [수정사항 2] 기기 뒤로가기 버튼 이벤트 감지 및 종료 팝업 처리
+  useEffect(() => {
+    const handlePopState = (e) => {
+      // 뒤로가기 동작을 막기 위해 현재 상태를 다시 history에 푸시
+      window.history.pushState(null, null, window.location.pathname);
+      
+      const isConfirmed = window.confirm("게임을 종료하시겠습니까?\n진행사항은 자동 저장됩니다.");
+      if (isConfirmed) {
+        // Capacitor, Cordova, 일반 웹뷰 등 환경에 맞는 앱 종료 처리
+        if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.App) {
+          window.Capacitor.Plugins.App.exitApp();
+        } else if (window.navigator && window.navigator.app && window.navigator.app.exitApp) {
+          window.navigator.app.exitApp();
+        } else {
+          window.close();
+        }
+      }
+    };
+
+    // 초기 history state 삽입
+    window.history.pushState(null, null, window.location.pathname);
+    window.addEventListener('popstate', handlePopState);
+
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+    };
+  }, []);
 
   useEffect(() => {
     const saved = localStorage.getItem(SAVE_KEY);
@@ -731,13 +759,27 @@ export default function App() {
   // 조합 (미니게임 제출)
   const handleBrew = () => {
     if (currentGuess.includes(null) || brewPhase !== 'idle') return;
-    setActiveItemMode(null);
-    setSelectedSlotIndex(null);
 
     const brewCost = currentGuess.reduce((total, id) => {
       const ingredient = INGREDIENTS.find(ing => ing.id === id);
       return total + (ingredient ? getCurrentIngredientCost(ingredient.cost, id, currentEvent) : 0);
     }, 0);
+
+    // [수정사항 1] 조합 시 비용이 부족할 때 대출 이벤트 발생
+    if (!tutorial.isActive && money < brewCost) {
+      if (!hasUsedLoan) {
+        setActiveItemMode(null);
+        setSelectedSlotIndex(null);
+        setPendingRoute('minigame'); // 대출 후 미니게임으로 복귀하도록 경로 설정
+        setAppState('loan_event');
+      } else {
+        alert("자금이 부족합니다! 더 저렴한 재료를 조합하거나 상점 아이템을 활용하세요.");
+      }
+      return;
+    }
+
+    setActiveItemMode(null);
+    setSelectedSlotIndex(null);
 
     const newMoney = tutorial.isActive ? money : money - brewCost;
     if (!tutorial.isActive) {
@@ -1098,6 +1140,7 @@ export default function App() {
               setMoney(prev => prev + 50);
               if (pendingRoute === 'next_customer') moveToNextCustomer();
               else if (pendingRoute === 'next_day') startNewDay(day + 1, dailyCustomers[dailyCustomers.length - 1].type);
+              else if (pendingRoute === 'minigame') setAppState('minigame'); // [수정사항 1] 미니게임으로 복귀 처리 추가
             }}
             className="w-full py-4 bg-amber-600 hover:bg-amber-500 text-white font-bold rounded-xl shadow-[0_0_20px_rgba(217,119,6,0.4)] transition-all transform hover:scale-[1.02] flex items-center justify-center gap-2 text-base sm:text-lg"
           >
@@ -1499,7 +1542,7 @@ export default function App() {
                         onClick={() => handleIngredientClick(item.id)}
                         disabled={minigameResult !== null || brewPhase !== 'idle' || (!isItemTarget && !isSelected && !currentGuess.includes(null)) || (activeItemMode === 'hintIngredient' && isKnown) || isTutDisabled}
                         className={`
-                          relative p-1.5 sm:p-3 min-h-[52px] sm:min-h-[72px] rounded-xl flex flex-col items-center justify-center transition-all duration-300 border-2
+                          relative p-1.5 sm:p-3 min-h-[52px] sm:minh-[72px] rounded-xl flex flex-col items-center justify-center transition-all duration-300 border-2
                           ${isSelected && !activeItemMode ? 'bg-slate-700 border-purple-500 shadow-[0_0_12px_rgba(168,85,247,0.5)] transform scale-105 z-10' : 'bg-slate-900 border-slate-700'}
                           ${isItemTarget ? 'hover:border-indigo-400 hover:shadow-[0_0_12px_rgba(99,102,241,0.5)] cursor-crosshair z-10' : ''}
                           ${(!activeItemMode && !isSelected && !currentGuess.includes(null)) || isTutDisabled ? 'opacity-40 cursor-not-allowed' : 'hover:-translate-y-1'}
@@ -1593,12 +1636,13 @@ export default function App() {
                   })}
                 </div>
                 
+                {/* [수정사항 1] 버튼의 disabled 조건에서 자금 부족 조건 삭제 */}
                 <button
                   onClick={handleBrew}
-                  disabled={currentGuess.includes(null) || minigameResult !== null || brewPhase !== 'idle' || activeItemMode !== null || (tutorial.isActive && !tutorial.step.startsWith('brew_')) || (!tutorial.isActive && currentGuess.reduce((s, id) => s + (INGREDIENTS.find(i => i.id === id) ? getCurrentIngredientCost(INGREDIENTS.find(i => i.id === id).cost, id, currentEvent) : 0), 0) > money)}
+                  disabled={currentGuess.includes(null) || minigameResult !== null || brewPhase !== 'idle' || activeItemMode !== null || (tutorial.isActive && !tutorial.step.startsWith('brew_'))}
                   className={`
                     w-full py-2.5 sm:py-4 font-extrabold rounded-xl transition-all shadow-lg flex items-center justify-center gap-2 sm:gap-3 text-sm sm:text-lg z-10 relative
-                    ${(brewPhase !== 'idle' || activeItemMode || (tutorial.isActive && !tutorial.step.startsWith('brew_')) || (!tutorial.isActive && currentGuess.reduce((s, id) => s + (INGREDIENTS.find(i => i.id === id) ? getCurrentIngredientCost(INGREDIENTS.find(i => i.id === id).cost, id, currentEvent) : 0), 0) > money)) ? 'bg-slate-600 text-slate-400 cursor-not-allowed' : 'bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white hover:shadow-[0_0_15px_rgba(168,85,247,0.4)]'}
+                    ${(brewPhase !== 'idle' || activeItemMode || (tutorial.isActive && !tutorial.step.startsWith('brew_'))) ? 'bg-slate-600 text-slate-400 cursor-not-allowed' : 'bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white hover:shadow-[0_0_15px_rgba(168,85,247,0.4)]'}
                     ${tutorial.isActive && tutorial.step.startsWith('brew_') ? 'ring-4 ring-indigo-400 animate-pulse' : ''}
                   `}
                 >
