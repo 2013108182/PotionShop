@@ -1,38 +1,173 @@
-/**
- * 위대한 마법약 상점 (The Great Potion Shop)
- *
- * 플레이어는 마법약 상점의 주인으로서 매일 방문하는 손님들의 대화를 듣고
- * 적절한 물약을 처방(진단)한 뒤, 워들(Wordle) 방식의 재료 조합 미니게임으로
- * 정해진 비밀 레시피를 추리하여 물약을 조제한다.
- *
- * 게임 흐름:
- * start → shop(처방전 작성) → minigame(재료 조합) → day_end(일일 정산) → 반복
- * 명성(reputation)이 0 이하가 되면 game_over(파산)
- *
- * 주요 시스템:
- * - 명성 기반 물약 해금: 명성이 높아질수록 더 복잡한 물약이 해금됨
- * - 힌트 아이템: 골드로 '재료 감별 돋보기'(특정 재료 포함 여부 확인)와
- * '슬롯 투시 구슬'(특정 슬롯의 정답 재료 확인)을 구매 가능
- * - 튜토리얼: 첫 플레이 시 단계별 안내 제공
- * - 자동 저장: localStorage를 통해 진행 상황 자동 저장/불러오기
- */
-
-import React, { useState, useEffect } from 'react';
-import {
-  RotateCcw, FlaskConical, Sparkles, AlertCircle, Flame,
+import React, { useState, useEffect, useRef } from 'react';
+import { 
+  RotateCcw, FlaskConical, Sparkles, AlertCircle, Flame, 
   Store, Coins, Star, Users, ArrowRight, BookOpen,
-  Search, Eye, ShoppingBag, X, Target,
-  ScrollText, CheckCircle2, XCircle, Info, Save, Lock, Newspaper, TrendingUp, TrendingDown, Ban, Skull
+  Search, Eye, ShoppingBag, X, PackageOpen, Target,
+  ScrollText, CheckCircle2, XCircle, Info, Save, Lock,
+  Volume2, VolumeX
 } from 'lucide-react';
 
-/* =========================================================================
- * 재료 데이터
- * 게임에서 사용할 수 있는 모든 재료 목록
- * id: 재료 고유 식별자 (레시피 비교에 사용)
- * emoji/name: 화면 표시용
- * color: 재료 버튼 테마 색상 (Tailwind 클래스)
- * cost: 조합 시도 1회당 차감되는 골드 비용
- * ========================================================================= */
+// --- 오디오 유틸리티 (웹 오디오 API 기반 8비트 사운드) ---
+let audioCtx = null;
+const playSound = (type) => {
+  try {
+    if (!window.AudioContext && !window.webkitAudioContext) return;
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    const now = audioCtx.currentTime;
+
+    if (type === 'click') {
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(600, now);
+      osc.frequency.exponentialRampToValueAtTime(300, now + 0.1);
+      gain.gain.setValueAtTime(0.1, now);
+      gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+      osc.start(now);
+      osc.stop(now + 0.1);
+    } else if (type === 'pop') {
+      osc.type = 'square';
+      osc.frequency.setValueAtTime(400, now);
+      osc.frequency.exponentialRampToValueAtTime(600, now + 0.05);
+      gain.gain.setValueAtTime(0.05, now);
+      gain.gain.exponentialRampToValueAtTime(0.01, now + 0.05);
+      osc.start(now);
+      osc.stop(now + 0.05);
+    } else if (type === 'coin') {
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(1000, now);
+      osc.frequency.setValueAtTime(1500, now + 0.05);
+      gain.gain.setValueAtTime(0.1, now);
+      gain.gain.linearRampToValueAtTime(0.01, now + 0.2);
+      osc.start(now);
+      osc.stop(now + 0.2);
+    } else if (type === 'success') {
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(400, now);
+      osc.frequency.setValueAtTime(500, now + 0.1);
+      osc.frequency.setValueAtTime(600, now + 0.2);
+      gain.gain.setValueAtTime(0.1, now);
+      gain.gain.linearRampToValueAtTime(0.01, now + 0.5);
+      osc.start(now);
+      osc.stop(now + 0.5);
+    } else if (type === 'fail') {
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(300, now);
+      osc.frequency.linearRampToValueAtTime(150, now + 0.3);
+      gain.gain.setValueAtTime(0.1, now);
+      gain.gain.linearRampToValueAtTime(0.01, now + 0.4);
+      osc.start(now);
+      osc.stop(now + 0.4);
+    } else if (type === 'bubble') {
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(200, now);
+      osc.frequency.linearRampToValueAtTime(300, now + 0.1);
+      osc.frequency.linearRampToValueAtTime(200, now + 0.2);
+      gain.gain.setValueAtTime(0.1, now);
+      gain.gain.linearRampToValueAtTime(0.01, now + 0.3);
+      osc.start(now);
+      osc.stop(now + 0.3);
+    } else if (type === 'magic') {
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(800, now);
+      osc.frequency.linearRampToValueAtTime(1200, now + 0.1);
+      osc.frequency.linearRampToValueAtTime(1600, now + 0.2);
+      gain.gain.setValueAtTime(0.05, now);
+      gain.gain.linearRampToValueAtTime(0.01, now + 0.4);
+      osc.start(now);
+      osc.stop(now + 0.4);
+    } else if (type === 'brew_good') {
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(440, now);
+      osc.frequency.setValueAtTime(587.33, now + 0.1);
+      gain.gain.setValueAtTime(0.1, now);
+      gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+      osc.start(now);
+      osc.stop(now + 0.3);
+    } else if (type === 'brew_bad') {
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(150, now);
+      osc.frequency.exponentialRampToValueAtTime(80, now + 0.2);
+      gain.gain.setValueAtTime(0.1, now);
+      gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+      osc.start(now);
+      osc.stop(now + 0.3);
+    } else if (type === 'fanfare') {
+      [261.63, 329.63, 392.00, 523.25].forEach((freq, i) => {
+        const o = audioCtx.createOscillator();
+        o.type = 'triangle';
+        o.frequency.value = freq;
+        const g = audioCtx.createGain();
+        o.connect(g);
+        g.connect(audioCtx.destination);
+        g.gain.setValueAtTime(0, now + i * 0.15);
+        g.gain.linearRampToValueAtTime(0.1, now + i * 0.15 + 0.05);
+        g.gain.exponentialRampToValueAtTime(0.01, now + i * 0.15 + 0.6);
+        o.start(now + i * 0.15);
+        o.stop(now + i * 0.15 + 0.6);
+      });
+      return;
+    } else if (type === 'explosion') {
+      osc.type = 'square';
+      osc.frequency.setValueAtTime(100, now);
+      osc.frequency.exponentialRampToValueAtTime(10, now + 0.5);
+      gain.gain.setValueAtTime(0.2, now);
+      gain.gain.exponentialRampToValueAtTime(0.01, now + 0.8);
+      osc.start(now);
+      osc.stop(now + 0.8);
+      
+      const osc2 = audioCtx.createOscillator();
+      osc2.type = 'sawtooth';
+      osc2.frequency.setValueAtTime(120, now);
+      osc2.frequency.exponentialRampToValueAtTime(15, now + 0.5);
+      osc2.connect(gain);
+      osc2.start(now);
+      osc2.stop(now + 0.8);
+      return;
+    }
+  } catch(e) {}
+};
+
+// --- 다채널 시퀀서 BGM 정의 ---
+const midiToFreq = (m) => 440 * Math.pow(2, (m - 69) / 12);
+
+// 메인 멜로디 (신비로운 리드)
+const BGM_MELODY = [
+  76, -1, 72, -1, 69, -1, 72, 76, 81, -1, 79, -1, 76, -1, -1, -1,
+  74, -1, 69, -1, 65, -1, 69, 74, 79, -1, 77, -1, 74, -1, -1, -1,
+  72, -1, 69, -1, 65, -1, 69, 72, 77, -1, 76, -1, 72, -1, -1, -1,
+  71, -1, 68, -1, 64, -1, 68, 71, 76, -1, 74, -1, 71, -1, 72, 74
+];
+
+// 베이스 라인 (무거운 저음)
+const BGM_BASS = [
+  45, -1, -1, -1, 45, -1, -1, -1, 45, -1, 52, -1, 45, -1, 40, -1,
+  38, -1, -1, -1, 38, -1, -1, -1, 38, -1, 45, -1, 38, -1, 33, -1,
+  41, -1, -1, -1, 41, -1, -1, -1, 41, -1, 48, -1, 41, -1, 36, -1,
+  40, -1, -1, -1, 40, -1, -1, -1, 40, -1, 47, -1, 40, -1, 52, -1
+];
+
+// 아르페지오 화음 (배경에 깔리는 반짝이는 소리)
+const BGM_ARP = [
+  57, 60, 64, 60, 57, 60, 64, 60, 57, 60, 64, 60, 57, 60, 64, 60,
+  53, 57, 62, 57, 53, 57, 62, 57, 53, 57, 62, 57, 53, 57, 62, 57,
+  53, 57, 60, 57, 53, 57, 60, 57, 53, 57, 60, 57, 53, 57, 60, 57,
+  52, 56, 59, 56, 52, 56, 59, 56, 52, 56, 59, 56, 52, 56, 59, 56
+];
+
+// 간단한 드럼 비트 (0: 킥, 1: 하이햇, 2: 마법 스네어)
+const BGM_DRUMS = [
+  0, 1, 1, 1, 2, 1, 1, 1, 0, 1, 0, 1, 2, 1, 1, 1,
+  0, 1, 1, 1, 2, 1, 1, 1, 0, 1, 0, 1, 2, 1, 1, 1,
+  0, 1, 1, 1, 2, 1, 1, 1, 0, 1, 0, 1, 2, 1, 1, 1,
+  0, 1, 1, 1, 2, 1, 1, 1, 0, 1, 0, 1, 2, 1, 1, 1
+];
+
+// --- 데이터 정의 ---
 const INGREDIENTS = [
   { id: '1', emoji: '🌺', name: '적염화', color: 'bg-red-100 border-red-300 text-red-700', cost: 4 },
   { id: '2', emoji: '💧', name: '정령의 눈물', color: 'bg-blue-100 border-blue-300 text-blue-700', cost: 3 },
@@ -46,28 +181,13 @@ const INGREDIENTS = [
   { id: '10', emoji: '🍄', name: '별빛 버섯', color: 'bg-orange-100 border-orange-300 text-orange-700', cost: 5 }
 ];
 
-/* =========================================================================
- * 물약 데이터베이스
- * 게임 내 모든 물약의 스펙 정의
- * slots: 조합에 필요한 재료 칸 수 (3~5칸)
- * maxAttempts: 최대 조합 시도 횟수
- * baseReward: 조제 성공 시 기본 보수 (골드)
- * reqRep: 이 물약을 처방/조제하기 위해 필요한 최소 명성치
- * recipe: 정답 재료 배열 (순서 포함) — 워들처럼 위치가 중요함
- *
- * 명성이 오를수록 더 많은 칸수(복잡도)의 물약이 해금되는 구조:
- * reqRep 0~50 → 3칸, 60~140 → 4칸, 180~350 → 5칸
- * ========================================================================= */
 const POTION_DB = {
-  // 3칸 물약 (시작~초반)
   "깊은 밤의 숙면 물약": { slots: 3, maxAttempts: 8, baseReward: 35, reqRep: 0, recipe: ['8', '2', '9'] },
   "올빼미의 시야 물약": { slots: 3, maxAttempts: 8, baseReward: 35, reqRep: 0, recipe: ['9', '5', '10'] },
   "행운의 네잎클로버 물약": { slots: 3, maxAttempts: 8, baseReward: 40, reqRep: 0, recipe: ['7', '4', '2'] },
   "천상의 목소리 영약": { slots: 3, maxAttempts: 8, baseReward: 40, reqRep: 20, recipe: ['4', '7', '2'] },
   "거짓말 탐지 영약": { slots: 3, maxAttempts: 8, baseReward: 45, reqRep: 30, recipe: ['2', '9', '5'] },
   "광속의 깃털 물약": { slots: 3, maxAttempts: 8, baseReward: 45, reqRep: 40, recipe: ['4', '3', '1'] },
-  
-  // 4칸 물약 (중반부 해금)
   "신속의 치유 물약": { slots: 4, maxAttempts: 10, baseReward: 50, reqRep: 60, recipe: ['6', '7', '2', '4'] },
   "맹독성 가스 물약": { slots: 4, maxAttempts: 10, baseReward: 55, reqRep: 70, recipe: ['7', '3', '5', '8'] },
   "물갈퀴 변이 물약": { slots: 4, maxAttempts: 10, baseReward: 60, reqRep: 80, recipe: ['5', '3', '7', '2'] },
@@ -76,8 +196,6 @@ const POTION_DB = {
   "사랑의 묘약": { slots: 4, maxAttempts: 10, baseReward: 70, reqRep: 110, recipe: ['1', '4', '2', '10'] },
   "그림자 걸음 물약": { slots: 4, maxAttempts: 10, baseReward: 75, reqRep: 120, recipe: ['8', '9', '5', '10'] },
   "투명화 영약": { slots: 4, maxAttempts: 10, baseReward: 80, reqRep: 140, recipe: ['8', '9', '4', '5'] },
-  
-  // 5칸 물약 (후반부 해금)
   "눈부신 오로라 물약": { slots: 5, maxAttempts: 12, baseReward: 85, reqRep: 180, recipe: ['9', '10', '4', '6', '2'] },
   "기억 소거 물약": { slots: 5, maxAttempts: 12, baseReward: 90, reqRep: 200, recipe: ['8', '5', '9', '2', '4'] },
   "용의 숨결 물약": { slots: 5, maxAttempts: 12, baseReward: 95, reqRep: 230, recipe: ['3', '1', '7', '8', '2'] },
@@ -86,159 +204,148 @@ const POTION_DB = {
   "만병통치약": { slots: 5, maxAttempts: 12, baseReward: 130, reqRep: 350, recipe: ['1', '2', '3', '4', '6'] }
 };
 
-// reqRep 오름차순으로 정렬된 물약 이름 목록 (처방전 UI에 표시)
 const POTION_CATALOG = Object.keys(POTION_DB).sort((a, b) => POTION_DB[a].reqRep - POTION_DB[b].reqRep);
 
-// 재료 중 가장 저렴한 단가 (골드가 이 값 미만이면 파산 처리)
-const MIN_INGREDIENT_COST = Math.min(...INGREDIENTS.map(i => i.cost));
-
-/* =========================================================================
- * 손님 데이터
- * 각 손님 유형(type)별 퀘스트(요청) 목록
- * dialogue: 손님이 직접 증상/원하는 효과를 설명하는 대사 (물약 이름 언급 안 함)
- * potionName: dialogue에 대응하는 정답 물약 이름
- * ========================================================================= */
 const CUSTOMER_DATA = [
   {
     type: 'villager', emoji: '👨‍🌾', name: '마을 농부',
     quests: [
-      { dialogue: "눈꺼풀은 천근만근인데, 누우면 정신이 말똥말똥하니 환장할 노릇이오. 깊은 밤속으로 푹 잠기고 싶구려.", potionName: "깊은 밤의 숙면 물약" },
-      { dialogue: "장정 넷이 붙어도 안 움직이는 바윗덩이가 밭 한복판에 박혔소. 내 팔에 무쇠 같은 힘이라도 솟으면 좋으련만.", potionName: "거인의 힘 물약" },
-      { dialogue: "낫질 한 번 잘못했다가 발등을 크게 찍었소. 상처가 아물 기미가 안 보이니, 이거 큰일 아니오?", potionName: "신속의 치유 물약" },
-      { dialogue: "밭에 지독한 해충들이 꼬여서 농사를 다 망치게 생겼소. 놈들이 기절할 만큼 독한 냄새를 좀 풍겨야겠소.", potionName: "맹독성 가스 물약" },
-      { dialogue: "올해는 어째 씨를 뿌려도 흉조만 찾아드니... 지푸라기라도 잡는 심정으로 하늘의 운이라도 빌려보고 싶소.", potionName: "행운의 네잎클로버 물약" },
-      { dialogue: "마 마을에 원인 모를 역병이 돌아 사람들이 죽어 나가고 있소. 어떤 병마도 씻어낼 전설의 약이라도 필요하오.", potionName: "만병통치약" }
+      { dialogue: "요즘 통 눈을 붙일 수가 없소. 밤새 뒤척이다 보면 해가 중천이오.", potionName: "깊은 밤의 숙면 물약" },
+      { dialogue: "이놈의 통나무가 꿈쩍도 안 하네. 내 팔뚝이 며칠만이라도 바위처럼 단단해졌으면 좋겠구려.", potionName: "거인의 힘 물약" },
+      { dialogue: "낫질하다가 그만 푹 베여버렸지 뭐요. 피가 멈추질 않아서 큰일이오.", potionName: "신속의 치유 물약" },
+      { dialogue: "밭에 요상한 벌레들이 들끓고 있소. 근처에 얼씬도 못 하게 할 지독한 냄새가 필요하오.", potionName: "맹독성 가스 물약" },
+      { dialogue: "올해는 어째 씨앗 뿌리는 족족 새들이 다 파먹는구려. 하늘이 좀 도와줬으면 좋겠는데...", potionName: "행운의 네잎클로버 물약" },
+      { dialogue: "마을 사람들이 하나둘 시름시름 앓고 있소. 의원도 두 손 두 발 다 들었는데, 무슨 방법이 없겠소?", potionName: "만병통치약" }
     ]
   },
   {
     type: 'bard', emoji: '🧑‍🎤', name: '떠돌이 음유시인',
     quests: [
-      { dialogue: "내일은 왕실의 축제라오. 내 목소리가 숲속의 요정처럼 맑고 감미롭게 울려 퍼져야 할 텐데.", potionName: "천상의 목소리 영약" },
-      { dialogue: "영감이 메말라 손끝조차 움직이지 않는구려. 내 영혼을 불태워줄 뜨거운 마력의 폭발이 필요하오.", potionName: "마력 폭주 영약" },
-      { dialogue: "단조로운 무대는 지루한 법이지요. 밤하늘의 오로라를 그대로 옮겨온 듯한 화려한 연출을 원하오.", potionName: "눈부신 오로라 물약" },
-      { dialogue: "이런, 공연 시간이 코앞인데 발이 묶였소! 구름 위를 달리는 바람처럼 순식간에 이동할 방법이 없겠소?", potionName: "광속의 깃털 물약" },
-      { dialogue: "저기 저 아가씨의 차가운 눈빛을 녹이고 싶소. 내 노래 한 자락에 그녀의 심장이 뛰게 만들 수만 있다면...", potionName: "사랑의 묘약" }
+      { dialogue: "내일은 왕 앞에서의 독창이오. 꾀꼬리조차 울고 갈 만큼 맑은 소리가 나야 할 텐데.", potionName: "천상의 목소리 영약" },
+      { dialogue: "사흘 밤낮으로 악상이 떠오르질 않소. 내 머릿속을 강렬하게 깨워줄 무언가가 절실하오.", potionName: "마력 폭주 영약" },
+      { dialogue: "관객들의 시선을 단숨에 사로잡을 무대 효과가 필요하오. 내 주위가 화려해졌으면 좋겠는데.", potionName: "눈부신 오로라 물약" },
+      { dialogue: "공연 시간에 늦어버렸소! 저 산 너머 마을까지 순식간에 도착할 방법이 없겠소?", potionName: "광속의 깃털 물약" },
+      { dialogue: "저기 저 아가씨의 눈길을 한 번이라도 끌고 싶소. 내게 푹 빠지게 만들 방법이 없겠소?", potionName: "사랑의 묘약" }
     ]
   },
   {
     type: 'fairy', emoji: '🧚‍♀️', name: '장난꾸러기 요정',
     quests: [
-      { dialogue: "인간들 머리카락을 다 엉키게 하고 도망갈 거야! 내 날개가 눈에 보이지 않을 만큼 빨라지게 해 줘!", potionName: "광속의 깃털 물약" },
-      { dialogue: "살금살금 다가가서 깜짝 놀라게 해 줄래! 공기를 밟는 듯이 발소리가 아예 안 났으면 좋겠어.", potionName: "그림자 걸음 물약" },
-      { dialogue: "욕심쟁이 고블린 굴에 코를 찌르는 악취를 가득 채워주고 싶어! 평생 못 잊을 지독한 걸로 줘!", potionName: "맹독성 가스 물약" },
-      { dialogue: "오늘 밤 연회에서 내가 주인공이 될 거야! 온몸에서 눈부신 빛이 쏟아져 나오게 해 줄래?", potionName: "눈부신 오로라 물약" },
-      { dialogue: "완벽한 숨바꼭질을 하고 싶어! 공기처럼 투명해져서 아무도 나를 찾지 못하게 만들어 줘.", potionName: "투명화 영약" },
-      { dialogue: "히히, 장난이 좀 과했나 봐. 무서운 아저씨들이 방금 있었던 일을 통째로 잊어버렸으면 좋겠어!", potionName: "기억 소거 물약" }
+      { dialogue: "인간들 머리카락을 묶어놓고 도망갈 거야! 슉! 하고 사라지게 해 줘!", potionName: "광속의 깃털 물약" },
+      { dialogue: "살금살금 다가가서 귀에다 소리칠 거야! 내 발소리가 아무한테도 안 들렸으면 좋겠어.", potionName: "그림자 걸음 물약" },
+      { dialogue: "친구 꽃밭에 꼬리구린내를 피워놓을 거야! 코를 쥐어막을 만큼 지독한 걸로 부탁해!", potionName: "맹독성 가스 물약" },
+      { dialogue: "밤하늘의 별보다 내가 더 예쁘게 반짝였으면 좋겠어! 온몸이 화려해지는 걸로 줘!", potionName: "눈부신 오로라 물약" },
+      { dialogue: "숨바꼭질에서 절대 안 들킬 거야! 아예 내 몸이 없는 것처럼 만들어줄 수 있어?", potionName: "투명화 영약" },
+      { dialogue: "장난을 좀 심하게 쳤더니 고블린들이 화났어... 걔네들이 방금 일어난 일을 싹 잊게 해줘!", potionName: "기억 소거 물약" }
     ]
   },
   {
     type: 'knight', emoji: '💂‍♂️', name: '성기사',
     quests: [
-      { dialogue: "전투 중에 묻은 마물의 피가 갑옷을 뚫고 살을 파고드는군. 이 불길한 상처를 즉시 치료해야 하네.", potionName: "신속의 치유 물약" },
-      { dialogue: "적진 깊숙이 잠입해야 하네. 철갑의 마찰음조차 어둠 속에 묻어버릴 은밀함이 필요하군.", potionName: "그림자 걸음 물약" },
-      { dialogue: "빛조차 삼켜버린 심연의 던전이군. 횃불 없이도 적의 숨결까지 읽어낼 눈이 필요하네.", potionName: "올빼미의 시야 물약" },
-      { dialogue: "앞길을 가로막는 성문을 부숴야 하네. 내 검과 방패에 거신(巨神)의 위력을 담아줄 수 있겠나?", potionName: "거인의 힘 물약" },
-      { dialogue: "간첩을 잡았으나 입을 굳게 닫고 있군. 거짓을 뱉을 수 없도록 혀를 정화할 비책이 필요하네.", potionName: "거짓말 탐지 영약" },
-      { dialogue: "국왕의 보물이 깊은 호수에 잠겼네. 인간의 숨을 포기하고 물결 속에서 자유로워져야 하네.", potionName: "물갈퀴 변이 물약" }
+      { dialogue: "갑옷 틈새로 독 화살이 스쳤소. 상처 부위가 검게 변하고 있는데 어찌해야 하오?", potionName: "신속의 치유 물약" },
+      { dialogue: "적의 보초들이 깨어있소. 금속 갑옷 소리가 밖으로 새어나가지 않게 해야 하오.", potionName: "그림자 걸음 물약" },
+      { dialogue: "달빛조차 닿지 않는 지하 던전을 수색해야 하오. 횃불 없이도 적의 움직임을 봐야겠소.", potionName: "올빼미의 시야 물약" },
+      { dialogue: "성을 막고 있는 저 무거운 철문을 내 두 팔로 뜯어내야만 하오.", potionName: "거인의 힘 물약" },
+      { dialogue: "잡혀 온 포로가 도통 입을 열지 않소. 혀끝에서 진실만이 흘러나오게 만들 방법이 있소?", potionName: "거짓말 탐지 영약" },
+      { dialogue: "성물이 깊은 호수 밑바닥으로 떨어졌소. 숨을 참는 것만으로는 바닥에 닿을 수 없을 것 같소.", potionName: "물갈퀴 변이 물약" }
     ]
   },
   {
     type: 'wizard', emoji: '🧙‍♂️', name: '괴짜 마법사',
     quests: [
-      { dialogue: "금단의 주문을 읊었더니 마력이 바닥나버렸어! 심장이 터질 듯한 에너지를 주입해야겠네.", potionName: "마력 폭주 영약" },
-      { dialogue: "수백 년 된 마법서를 읽었더니 앞이 침침해. 미세한 마력의 흐름까지 꿰뚫어 볼 시야가 필요하네.", potionName: "올빼미의 시야 물약" },
-      { dialogue: "실패다! 실험실을 통째로 날려버렸군! 방금 전의 그 어리석은 순간을 되돌릴 방법은 없는 건가?", potionName: "시간 역행의 영약" },
-      { dialogue: "연구실 근처에 자꾸 좀도둑이 꼬이는군. 문을 여는 순간 숨이 막혀 쓰러질 함정용 액체가 필요해.", potionName: "맹독성 가스 물약" },
-      { dialogue: "제자가 내 비상금 위치를 알아버렸어! 그 녀석의 기억 속에서 어제의 일을 깨끗이 지워주게.", potionName: "기억 소거 물약" },
-      { dialogue: "이자가 내 보석을 훔친 게 분명해. 속임수가 통하지 않게 본심만 털어놓게 할 수 있겠나?", potionName: "거짓말 탐지 영약" }
+      { dialogue: "어제 실험을 무리했더니 몸속의 기운이 텅 비어버렸네. 단숨에 끌어올릴 심장이 뛸 만한 약이 필요해.", potionName: "마력 폭주 영약" },
+      { dialogue: "두꺼운 고서를 너무 오래 들여다봤더니 글자가 두 개로 겹쳐 보이네. 흐릿한 시야를 맑게 해 주게.", potionName: "올빼미의 시야 물약" },
+      { dialogue: "방금 폭발 실험으로 내 소중한 연구 노트를 태워먹었네! 조금 전으로 되돌릴 수만 있다면...", potionName: "시간 역행의 영약" },
+      { dialogue: "내 연구실에 자꾸 불청객이 꼬이는군. 문을 열자마자 숨을 턱 막히게 할 함정을 파야겠어.", potionName: "맹독성 가스 물약" },
+      { dialogue: "어제 내 수제자에게 절대 말해선 안 될 비밀 주문을 발설해 버렸네. 그 녀석의 머릿속을 비워야 해!", potionName: "기억 소거 물약" },
+      { dialogue: "누군가 내 희귀 재료를 훔쳐 갔어! 용의자들을 심문할 텐데, 본심을 숨기지 못하게 해주게.", potionName: "거짓말 탐지 영약" }
     ]
   },
   {
     type: 'witch', emoji: '🧙‍♀️', name: '늪지대 마녀',
     quests: [
-      { dialogue: "히히히... 숨만 쉬어도 나무가 말라 죽고 꽃이 시드는... 그런 지독한 안개를 만들 거야.", potionName: "맹독성 가스 물약" },
-      { dialogue: "이 지긋지긋한 늪의 냄새는 싫어. 오늘만큼은 이 세상에서 가장 아름답고 눈부신 존재가 되고 싶군.", potionName: "눈부신 오로라 물약" },
-      { dialogue: "빗자루가 부러져서 제시간에 도착할 수가 없어! 빛보다 빠르게 공간을 가로지르는 비책을 내놔.", potionName: "광속의 깃털 물약" },
-      { dialogue: "달빛 한 줌 없는 칠흑 같은 밤에도 도마뱀 꼬리를 정확히 골라내야 해. 어둠 따위는 장애물이 아니지.", potionName: "올빼미의 시야 물약" },
-      { dialogue: "감히 나를 모욕한 녀석들을 잿더미로 만들 테다! 내 숨결에 화룡의 분노를 담아주겠니?", potionName: "용의 숨결 물약" },
-      { dialogue: "늪으로 들어온 꼬마 녀석을 돌려보낼 거야. 대신 자기가 누군지도 잊은 채 숲을 헤매게 되겠지.", potionName: "기억 소거 물약" }
+      { dialogue: "히히히... 가마솥에 넣을 마지막 재료가 필요해. 냄새만 맡아도 풀이 시들어버리는 걸로 줘.", potionName: "맹독성 가스 물약" },
+      { dialogue: "이 칙칙한 피부 좀 봐. 백설공주보다 더 화사하고 아름답게 변하고 싶은데.", potionName: "눈부신 오로라 물약" },
+      { dialogue: "내 낡은 빗자루가 부러졌어! 당장 내일 마녀 집회가 있는데, 날아가는 것보다 빨리 갈 방법이 필요해.", potionName: "광속의 깃털 물약" },
+      { dialogue: "달이 뜨지 않는 캄캄한 밤에도 도마뱀 꼬리를 찾아내야 해. 어둠이 무의미해지게 만들어 줘.", potionName: "올빼미의 시야 물약" },
+      { dialogue: "나를 무시하던 마법사 놈들의 탑을 잿더미로 만들어버릴 거야! 입술 사이로 불꽃이 일게 해 줘.", potionName: "용의 숨결 물약" },
+      { dialogue: "내 숲에 길을 잃고 들어온 꼬마 녀석이 있어. 집으로 가는 길은 물론이고 자기 이름도 잊게 만들어야지.", potionName: "기억 소거 물약" }
     ]
   },
   {
     type: 'thief', emoji: '🥷', name: '의심스러운 도적',
     quests: [
-      { dialogue: "유리 조각 위를 걸어도 쥐죽은 듯 조용해야 해. 그림자조차 소리를 내지 않는 비결을 원하네.", potionName: "그림자 걸음 물약" },
-      { dialogue: "추격대가 따라붙었군! 화살이 내 몸을 꿰뚫기 전에 바람처럼 저 언덕을 넘어야 하네.", potionName: "광속의 깃털 물약" },
-      { dialogue: "이 육중한 금고는 정교한 기술로도 안 풀려. 차라리 문짝을 맨손으로 뜯어낼 괴력을 주게.", potionName: "거인의 힘 물약" },
-      { dialogue: "경비견들이 너무 짖어대는군. 저 녀석들이 꿈나라에서 영영 깨어나고 싶지 않게 할 수 있나?", potionName: "깊은 밤의 숙면 물약" },
-      { dialogue: "우리 중 밀고자가 있어. 입만 열면 맹세가 아닌 진실만 쏟아내도록 입술을 묶어버려야겠어.", potionName: "거짓말 탐지 영약" },
-      { dialogue: "그냥 투명해지고 싶어. 경비병의 눈앞을 지나가도 아예 존재하지 않는 것처럼 말이야.", potionName: "투명화 영약" }
+      { dialogue: "바닥에 깔린 마른 나뭇잎을 밟아도 아무 소리가 나지 않아야 해. 가능하겠어?", potionName: "그림자 걸음 물약" },
+      { dialogue: "경비병이 눈치챘어! 화살이 날아오기 전에 내 등 뒤로 바람이 불게 해 줘.", potionName: "광속의 깃털 물약" },
+      { dialogue: "이 금고는 쇠지렛대로도 안 열리네. 내 양팔에 황소 수십 마리의 힘을 담아줄 수 있나?", potionName: "거인의 힘 물약" },
+      { dialogue: "저택을 지키는 맹견이 너무 사나워. 고기 조각에 섞어 먹일, 아주 고요해지는 가루가 필요해.", potionName: "깊은 밤의 숙면 물약" },
+      { dialogue: "조직 내에 돈을 빼돌리는 쥐새끼가 있어. 변명 따윈 못하게 혀를 묶어버릴 약이 필요해.", potionName: "거짓말 탐지 영약" },
+      { dialogue: "벽을 넘는 것조차 귀찮군. 아예 경비병의 눈동자에 내 모습이 맺히지 않게 해 줘.", potionName: "투명화 영약" }
     ]
   },
   {
     type: 'noble', emoji: '🤴', name: '허영심 많은 귀족',
     quests: [
-      { dialogue: "무도회에서 제가 가장 빛나야 해요. 장신구 따위가 아니라 제 피부에서 영롱한 광채가 뿜어져 나와야 한다고요!", potionName: "눈부신 오로라 물약" },
-      { dialogue: "최고급 침구도 이젠 지루하군요. 세상의 모든 근심을 잊고 깊은 잠속으로 빠져들게 해주세요.", potionName: "깊은 밤의 숙면 물약" },
-      { dialogue: "이 무거운 보석 드레스를 입고도 깃털처럼 가볍게 춤추고 싶어요. 발걸음이 구름 위를 걷는 듯하게 말이죠.", potionName: "광속의 깃털 물약" },
-      { dialogue: "중요한 연설을 앞두고 목소리가 탁해졌어요. 세상에서 가장 우아하고 아름다운 선율을 담아주세요.", potionName: "천상의 목소리 영약" },
-      { dialogue: "공작님이 절 보며 한눈을 팔다니요! 그분이 저를 보는 순간 심장이 멎을 듯한 사랑에 빠지게 하세요.", potionName: "사랑의 묘약" },
-      { dialogue: "어젯밤 만취해서 끔찍한 실수를 저질렀어요! 연회에 있던 모든 이의 머릿속을 깨끗이 세탁해야 해요!", potionName: "기억 소거 물약" }
+      { dialogue: "내일 황실 무도회에서 내가 가장 돋보여야 해요. 피부에서 자체적으로 빛이 나게 할 순 없나요?", potionName: "눈부신 오로라 물약" },
+      { dialogue: "요즘 침대가 가시방석 같아요. 눈을 감으면 아침까지 단 한 번도 깨지 않게 해주세요.", potionName: "깊은 밤의 숙면 물약" },
+      { dialogue: "이 무거운 드레스를 입고도 춤을 출 때 깃털처럼 가볍고 사뿐하게 움직이고 싶어요.", potionName: "광속의 깃털 물약" },
+      { dialogue: "연회에서 축사를 낭독해야 하는데 목이 잠겼군요. 은쟁반에 옥구슬 굴러가는 소리가 나야 해요.", potionName: "천상의 목소리 영약" },
+      { dialogue: "그 분의 시선이 자꾸 다른 영애를 향하네요. 그 분의 심장이 나만 보면 미친 듯이 뛰게 만들어주세요.", potionName: "사랑의 묘약" },
+      { dialogue: "어제 와인에 취해 백작님께 큰 실수를 저질렀어요... 연회장에 있던 사람들의 머릿속을 세탁해야 해요!", potionName: "기억 소거 물약" }
     ]
   },
   {
     type: 'vampire', emoji: '🧛‍♂️', name: '창백한 뱀파이어',
     quests: [
-      { dialogue: "수백 년간 커튼 뒤에만 숨어 살았지. 단 한 번이라도 저 찬란한 태양 아래 당당히 서보고 싶군.", potionName: "태양 극복의 영약" },
-      { dialogue: "나약해진 손끝으로는 관 뚜껑조차 무겁군. 전설 속 태고의 힘을 다시 일깨울 수 있겠나?", potionName: "거인의 힘 물약" },
-      { dialogue: "은 화살에 스친 상처가 타들어 가는군. 내 불멸의 육신이 다시 빠르게 재생되게 해주게.", potionName: "신속의 치유 물약" },
-      { dialogue: "그녀와 함께했던 그 소중한 기억이 흐릿해져 가네... 잃어버린 시간을 거슬러 그때로 돌아가고 싶군.", potionName: "시간 역행의 영약" },
-      { dialogue: "어둠 그 자체가 되고 싶네. 사냥꾼들이 내 숨소리조차 느끼지 못하도록 존재를 지워주게.", potionName: "투명화 영약" }
+      { dialogue: "아침 이슬을 직접 눈으로 보고 싶군. 내 창백한 피부가 타들어 가지 않을 비책이 있나?", potionName: "태양 극복의 영약" },
+      { dialogue: "수백 년을 관 속에 누워 있었더니 뼈마디가 쑤시는군. 다시 예전처럼 묘비석을 한 손으로 뽑아낼 기력이 필요해.", potionName: "거인의 힘 물약" },
+      { dialogue: "불쾌한 사냥꾼 놈들의 은장도에 긁혔어. 살점이 다시 빠르게 차오르게 해 줘.", potionName: "신속의 치유 물약" },
+      { dialogue: "그녀가 미소 짓던 수백 년 전의 그날 밤이 도무지 기억나지 않아. 내 흐릿한 옛 기억을 선명하게 돌려놔.", potionName: "시간 역행의 영약" },
+      { dialogue: "거울에 안 비치는 것만으론 부족해. 녀석들의 등 뒤에 설 때까지 내 존재 자체가 사라진 것처럼 해 줘.", potionName: "투명화 영약" }
     ]
   },
   {
     type: 'merchant', emoji: '🤑', name: '수상한 상인',
     quests: [
-      { dialogue: "물건에 하자가 있는 걸 들켰지 뭔가! 손님들이 방금 본 걸 싹 잊게 할 수 있나? 금전은 충분히 주지.", potionName: "기억 소거 물약" },
-      { dialogue: "도적 떼가 습격했어! 이 짐들은 버리더라도, 내 목숨 하나는 번개보다 빨리 피신시켜야겠네.", potionName: "광속의 깃털 물약" },
-      { dialogue: "거래처 녀석들이 장난을 치는 것 같아. 놈들이 헛소리를 못 하도록 진심만 털어놓게 만들어주게.", potionName: "거짓말 탐지 영약" },
-      { dialogue: "요즘 운수가 지독히도 없군. 엎어지면 코가 깨지니, 하늘이 내려주는 행운이라도 사야겠어.", potionName: "행운의 네잎클로버 물약" },
-      { dialogue: "짐꾼들이 파업을 했네! 내가 직접 낙타 백 마리 몫의 일들을 가볍게 옮길 수 있는 비법을 내놓게.", potionName: "거인의 힘 물약" }
+      { dialogue: "손님들이 내 물건의 작은 흠집들을 문제 삼으려고 하네. 방금 본 걸 금세 잊어버리게 할 방법 없나?", potionName: "기억 소거 물약" },
+      { dialogue: "산적 떼를 만났네! 짐 마차는 버리더라도 내 목숨은 건져야 해. 번개처럼 도망칠 수 있게 해 주게.", potionName: "광속의 깃털 물약" },
+      { dialogue: "저 상단 놈들이 제시한 장부가 영 수상해. 그놈들 입술이 덜덜 떨리며 바른말만 하게 해 주게.", potionName: "거짓말 탐지 영약" },
+      { dialogue: "요즘 배가 암초에 걸리고 창고에 불이 나고 난리도 아니야. 나쁜 기운을 몰아낼 부적이 필요해.", potionName: "행운의 네잎클로버 물약" },
+      { dialogue: "이 무거운 비단 상자들을 나를 인부가 부족해. 내가 직접 낙타 열 마리 몫을 거뜬히 옮기게 해 주게.", potionName: "거인의 힘 물약" }
     ]
   },
   {
     type: 'explorer', emoji: '🤠', name: '열혈 탐험가',
     quests: [
-      { dialogue: "고대 해저 도시의 입구를 찾았소. 물속에서도 물고기처럼 자유롭게 숨 쉬고 헤엄칠 수 있겠소?", potionName: "물갈퀴 변이 물약" },
-      { dialogue: "이 동굴은 빛이 한 점도 없군. 칠흑 같은 어둠 속에서도 바늘 하나까지 찾아낼 시야를 원하오.", potionName: "올빼미의 시야 물약" },
-      { dialogue: "정글의 독충들에게 시달려 몸이 엉망이오. 어떤 독기나 질병도 한순간에 정화할 수 있는 구급약이 필요하오.", potionName: "만병통치약" },
-      { dialogue: "유적의 거대한 석문이 길을 막고 있소. 기계의 힘 없이 순수한 완력으로 문을 밀어버리고 싶소.", potionName: "거인의 힘 물약" },
-      { dialogue: "가시덩굴에 찢긴 상처가 깊구려. 흉터 하나 없이 새살이 돋아나게 할 비약이 필요하오.", potionName: "신속의 치유 물약" }
+      { dialogue: "내일은 전설의 해저 도시를 탐험할 거요. 폐에 물이 차지 않고 자유롭게 헤엄쳐야만 하오.", potionName: "물갈퀴 변이 물약" },
+      { dialogue: "저 깊은 동굴 끝에는 빛이 한 줌도 닿지 않소. 칠흑 같은 어둠도 대낮처럼 보일 방법이 필요하오.", potionName: "올빼미의 시야 물약" },
+      { dialogue: "오지에선 모기 한 번 물려도 목숨이 위태롭지. 어떤 열병이나 독도 한 번에 씻어낼 구급약이 필요하오.", potionName: "만병통치약" },
+      { dialogue: "유적의 고대 석문이 단단히 닫혀 있소이다. 폭약 없이도 문을 통째로 밀어버릴 괴력을 주시오.", potionName: "거인의 힘 물약" },
+      { dialogue: "가시덩굴에 긁힌 상처가 곪아가고 있소. 흉터 하나 남기지 않고 순식간에 살이 붙게 해 주시오.", potionName: "신속의 치유 물약" }
     ]
   },
   {
     type: 'ghost', emoji: '👻', name: '원한 맺힌 유령',
     quests: [
-      { dialogue: "억울해서 떠날 수가 없어... 물건을 통과하는 이 허망한 손에 세상을 뒤엎을 원한의 힘을 담아 줘.", potionName: "거인의 힘 물약" },
-      { dialogue: "내가 어떻게 죽었는지 기억나지 않아... 끊어진 내 마지막 운명의 조각을 되찾아 보여 줘.", potionName: "시간 역행의 영약" },
-      { dialogue: "이승의 고통이 너무 길어... 내 영혼에 맺힌 모든 슬픔과 기억을 깨끗이 비워버리고 싶어.", potionName: "기억 소거 물약" },
-      { dialogue: "그에게 내 마지막 인사를 전하고 싶지만 닿지 않아. 내 목소리가 공기를 울려 그에게 들리게 해 줘.", potionName: "천상의 목소리 영약" },
-      { dialogue: "내 마지막 모습은 너무나 초라했지... 떠나기 전, 그 사람 앞에 가장 눈부시고 아름다웠던 빛으로 서고 싶어.", potionName: "눈부신 오로라 물약" }
+      { dialogue: "복수를 해야 하는데... 물건을 통과해버리는 내 손으로 탁자를 엎어버릴 수 있게 해 줘...", potionName: "거인의 힘 물약" },
+      { dialogue: "내가 어쩌다 이렇게 죽었는지 그 마지막 순간이 비어있어... 잃어버린 그날 밤의 진실을 보고 싶어...", potionName: "시간 역행의 영약" },
+      { dialogue: "이승에 남은 억울함과 슬픔 때문에 떠나질 못하겠어... 이 괴로운 감정들을 다 비워낼 수 있다면...", potionName: "기억 소거 물약" },
+      { dialogue: "그 사람이 내 외침을 듣지 못하고 그냥 지나쳐 가... 내 목소리가 공기를 진동시킬 수 있게 해 줘...", potionName: "천상의 목소리 영약" },
+      { dialogue: "내 모습이 너무 흐릿해... 마지막으로 그 사람 앞에 가장 찬란하고 또렷한 모습으로 서고 싶어...", potionName: "눈부신 오로라 물약" }
     ]
   },
   {
     type: 'mermaid', emoji: '🧜‍♀️', name: '호기심 많은 인어',
     quests: [
-      { dialogue: "바다 밖에서 만난 그 소년이 자꾸 생각나요. 그가 저를 보자마자 거부할 수 없는 이끌림을 느끼길 바라요.", potionName: "사랑의 묘약" },
-      { dialogue: "땅 위에서는 다리가 너무 무거워요. 육지에서도 물거품 사이를 노닐 듯 사뿐사뿐 가볍게 걷고 싶어요.", potionName: "광속의 깃털 물약" },
-      { dialogue: "심해의 마녀에게 목소리를 빼앗겼어요... 다시 바다를 울리던 제 고운 노래를 되찾아 주세요.", potionName: "천상의 목소리 영약" },
-      { dialogue: "태양 아래의 공기는 너무 뜨겁고 따가워요. 제 몸이 바닷속에 있는 것처럼 촉촉하고 시원하게 유지되길 원해요.", potionName: "태양 극복의 영약" },
-      { dialogue: "사람들 틈에서 그들을 구경하고 싶어요. 하지만 그들이 저를 알아채지 못하게, 물안개처럼 존재를 감춰주세요.", potionName: "투명화 영약" }
+      { dialogue: "육지의 왕자님을 구해주었어. 그가 눈을 떴을 때 나를 운명으로 느끼게 만들고 싶어.", potionName: "사랑의 묘약" },
+      { dialogue: "이 다리로는 모래사장을 걷는 게 너무 서툴고 무거워. 땅 위에서도 물결을 타듯 가볍게 움직이게 해 줘.", potionName: "광속의 깃털 물약" },
+      { dialogue: "다리를 얻는 대신 내 고운 목소리를 빼앗겼어... 다시 예전처럼 아름답게 노래할 수 있게 해 줘.", potionName: "천상의 목소리 영약" },
+      { dialogue: "육지의 한낮은 너무 건조하고 뜨거워. 내 비늘이 바싹 마르지 않고 촉촉하게 유지되게 해 줘.", potionName: "태양 극복의 영약" },
+      { dialogue: "해변에 모인 인간들을 가까이서 구경하고 싶어! 그들 눈에 내 모습이 파도처럼 흩어져 보이게 해 줘.", potionName: "투명화 영약" }
     ]
   }
 ];
 
-// 모든 손님 유형의 퀘스트를 단일 배열로 합친 것 (하루 손님 큐 생성 시 참조)
 const ALL_QUESTS = [];
 CUSTOMER_DATA.forEach(customer => {
   customer.quests.forEach(quest => {
@@ -252,123 +359,15 @@ CUSTOMER_DATA.forEach(customer => {
   });
 });
 
-/* =========================================================================
- * 거절 시 손님 반응 대사
- * ========================================================================= */
-const REJECT_DIALOGUES = {
-  villager: "아쉽구려. 할 수 없이 다른 곳을 찾아보겠소.",
-  bard: "아아... 내 영감이 식기 전에 서둘러 다른 곳으로 가야겠군요.",
-  fairy: "치, 재미없어! 구두쇠 상인 같으니라고!",
-  knight: "알겠네. 임무가 시급하니 이만 실례하지.",
-  wizard: "쯧쯧, 이래서야 위대한 상점이라 할 수 있겠나.",
-  witch: "흥, 역시 허접한 상점이었네. 내 발로 나가주마.",
-  thief: "흠... 알겠소. 없는 사람 치시오.",
-  noble: "정말 격 떨어지는 상점이군요. 다시는 안 오겠어요!",
-  vampire: "시간 낭비였군... 어둠 속으로 돌아가겠다.",
-  merchant: "장사의 기본이 안 되어 있구만! 내 갈 길 가겠네.",
-  explorer: "아쉽군! 다음 탐험을 위해 지체할 시간이 없소!",
-  ghost: "으으음... 허무하도다... 다시 구천을 떠돌아야겠군...",
-  mermaid: "아쉽네요... 그럼 다시 바다로 돌아갈게요."
-};
-
-const ITEM_COSTS = { hintIngredient: 10, hintSlot: 25 }; 
-const DAILY_RENT_BASE = 20; 
-const SAVE_KEY = 'potionShopSave';       
-const TUTORIAL_KEY = 'potionShopTutorialV4'; 
-
-/* =========================================================================
- * 다채로운 일일 이벤트 풀 생성기
- * 환경, 경제, 사회적 변동을 시뮬레이션하여 
- * 매일 아침 플레이어에게 전략적 선택을 강요합니다.
- * ========================================================================= */
-const generateDailyEvent = (day, reputation) => {
-  if (day === 1) return null; // 1일차는 튜토리얼을 위해 이벤트 없음
-
-  // 이벤트 풀 및 가중치 정의
-  const events = [
-    { weight: 8, type: 'viral_potion', targetId: 'random_unlocked', title: '💥 틱톡(?) 대유행!', message: `마을 전체에 챌린지가 유행입니다! 오늘 모든 손님이 약속이나 한 듯 [특정 물약]만을 찾습니다.` },
-    { weight: 8, type: 'global_tip', multiplier: 2.0, title: '🎉 마을 대축제', message: `축제로 마을 사람들이 들떠있습니다. 오늘 획득하는 모든 팁이 2배가 됩니다!` },
-    { weight: 8, type: 'expensive_ingredients_cost', multiplier: 2.0, title: '📜 왕실 규제령', message: `사치품 통제로 인해 단가가 높은(6G 이상) 고급 재료들의 가격이 2배로 폭등합니다.` },
-    { weight: 8, type: 'potion_group_reward', targets: ['거인의 힘 물약', '용의 숨결 물약', '신속의 치유 물약', '올빼미의 시야 물약'], multiplier: 2.0, title: '⚔️ 전쟁의 전조', message: `군수 물자 확보를 위해 기사단에서 [전투 및 버프 관련 물약]들을 2배의 가격에 매입합니다.` },
-    { weight: 8, type: 'potion_group_reward', targets: ['깊은 밤의 숙면 물약', '신속의 치유 물약', '만병통치약'], multiplier: 1.5, title: '🤧 지독한 독감 유행', message: `마 마을에 독감이 돌고 있습니다. [치유 및 수면 관련 물약]의 수요가 급증하여 보수가 1.5배가 됩니다.` },
-    { weight: 8, type: 'smuggler', costMultiplier: 0.5, repMultiplier: 0.5, title: '🏴‍☠️ 밀수업자의 방문', message: `출처를 알 수 없는 저렴한 재료가 들어왔습니다. 오늘 재료비는 반값이지만, 질이 떨어져 획득 명성도 반토막 납니다.` },
-    { weight: 8, type: 'critic_day', repMultiplier: 2.0, repPenaltyMultiplier: 2.0, title: '🧐 비평가의 순회일', message: `깐깐하기로 소문난 비평가들이 방문합니다. 조제 성공 시 명성을 2배로 얻지만, 실수(거절/오진/실패) 시 명성도 2배로 깎입니다!` },
-    { weight: 8, type: 'free_hints', title: '🌠 유성우 내리는 밤', message: `충만한 마력 덕분에 도구 상점의 힌트 아이템(돋보기, 구슬) 가격이 오늘 하루 전면 무료(0G)가 됩니다!` },
-    { weight: 6, type: 'rent_override', rent: 50, title: '💸 임대료 폭등', message: `악덕 건물주가 지붕 수리비를 핑계로 오늘 하루 상점 유지비를 50G로 뜯어갑니다. (파산 주의)` },
-    { weight: 10, type: 'ingredient_cost', targetId: 'random', multiplier: 2.0, title: '📈 재료 시세 폭등', message: `품귀 현상으로 인해 [특정 재료]의 가격이 오늘 하루 2배 올랐습니다.` },
-    { weight: 10, type: 'ingredient_cost', targetId: 'random', multiplier: 0.5, title: '📉 재료 대풍년', message: `공급량이 너무 넘쳐흘러 [특정 재료]의 가격이 반값으로 떨어졌습니다.` },
-    { weight: 15, type: 'none', title: '🕊️ 평화로운 하루', message: '오늘은 특별한 소식이 없습니다. 묵묵히 마법약을 끓이세요.' }
-  ];
-
-  // 가중치 랜덤 뽑기
-  const totalWeight = events.reduce((sum, e) => sum + e.weight, 0);
-  let rand = Math.random() * totalWeight;
-  let selectedEvent = events[0];
-  for (const e of events) {
-    if (rand < e.weight) { selectedEvent = e; break; }
-    rand -= e.weight;
-  }
-
-  const resultEvent = { ...selectedEvent };
-
-  // 'random' 타겟을 실제 게임 데이터로 치환
-  if (resultEvent.targetId === 'random') {
-    const ing = INGREDIENTS[Math.floor(Math.random() * INGREDIENTS.length)];
-    resultEvent.targetId = ing.id;
-    resultEvent.message = resultEvent.message.replace('특정 재료', ing.name);
-  } else if (resultEvent.targetId === 'random_unlocked') {
-     const unlockedPotions = Object.keys(POTION_DB).filter(p => POTION_DB[p].reqRep <= reputation);
-     const potionName = unlockedPotions[Math.floor(Math.random() * unlockedPotions.length)];
-     resultEvent.targetId = potionName;
-     resultEvent.message = resultEvent.message.replace('특정 물약', potionName);
-  }
-
-  return resultEvent;
-};
-
-// 재료비 계산 헬퍼 (이벤트 적용)
-const getCurrentIngredientCost = (baseCost, id, currentEvent) => {
-  if (!currentEvent) return baseCost;
-  if (currentEvent.type === 'ingredient_cost' && currentEvent.targetId === id) {
-    return Math.max(1, Math.floor(baseCost * currentEvent.multiplier));
-  }
-  if (currentEvent.type === 'expensive_ingredients_cost' && baseCost >= 6) {
-    return Math.floor(baseCost * currentEvent.multiplier);
-  }
-  if (currentEvent.type === 'smuggler') {
-    return Math.max(1, Math.floor(baseCost * currentEvent.costMultiplier));
-  }
-  return baseCost;
-};
-
-// 물약 보상 계산 헬퍼 (이벤트 적용)
-const getCurrentPotionReward = (baseReward, potionName, currentEvent) => {
-  if (!currentEvent) return baseReward;
-  if (currentEvent.type === 'potion_reward' && currentEvent.targetId === potionName) {
-    return Math.floor(baseReward * currentEvent.multiplier);
-  }
-  if (currentEvent.type === 'potion_group_reward' && currentEvent.targets.includes(potionName)) {
-    return Math.floor(baseReward * currentEvent.multiplier);
-  }
-  return baseReward;
-};
-
-// 상점 아이템 가격 계산 헬퍼 (이벤트 적용)
-const getCurrentItemCost = (type, currentEvent) => {
-  if (currentEvent?.type === 'free_hints') return 0;
-  return ITEM_COSTS[type];
-};
+const ITEM_COSTS = { hintIngredient: 10, hintSlot: 25 }; // 골드 가격
+const DAILY_RENT = 20; // 하루 임대료
+const SAVE_KEY = 'potionShopSave';
+const TUTORIAL_KEY = 'potionShopTutorialV4';
 
 export default function App() {
-  /* =========================================================================
-   * 화면 및 게임 상태 관리
-   * ========================================================================= */
   const [appState, setAppState] = useState('start');
   const [hasSaveData, setHasSaveData] = useState(false);
   const [saveIndicator, setSaveIndicator] = useState(false);
-  const [hasUsedLoan, setHasUsedLoan] = useState(false);
-  const [pendingRoute, setPendingRoute] = useState(null);
-  const [currentEvent, setCurrentEvent] = useState(null);
 
   const [tutorial, setTutorial] = useState({ isActive: false, step: '' });
   const [hasSeenTutorial, setHasSeenTutorial] = useState(false);
@@ -377,10 +376,10 @@ export default function App() {
   const [money, setMoney] = useState(0);
   const [reputation, setReputation] = useState(50);
   const [inventory, setInventory] = useState({ hintIngredient: 0, hintSlot: 0 });
-
+  
   const [dailySalesRevenue, setDailySalesRevenue] = useState(0);
   const [dailyIngredientCost, setDailyIngredientCost] = useState(0);
-
+  
   const [showShopModal, setShowShopModal] = useState(false);
   const [activeItemMode, setActiveItemMode] = useState(null);
   const [knownIngredients, setKnownIngredients] = useState({});
@@ -388,48 +387,124 @@ export default function App() {
 
   const [dailyCustomers, setDailyCustomers] = useState([]);
   const [currentCustomerIndex, setCurrentCustomerIndex] = useState(0);
-
+  
   const [isDiagnosing, setIsDiagnosing] = useState(false);
   const [diagnosisFeedback, setDiagnosisFeedback] = useState(null);
 
   const [secretRecipe, setSecretRecipe] = useState([]);
   const [currentGuess, setCurrentGuess] = useState([]);
   const [history, setHistory] = useState([]);
-  const [brewPhase, setBrewPhase] = useState('idle');
+  const [brewPhase, setBrewPhase] = useState('idle'); 
   const [effectText, setEffectText] = useState('');
   const [minigameResult, setMinigameResult] = useState(null);
   const [selectedSlotIndex, setSelectedSlotIndex] = useState(null);
 
-  // 이벤트에 따른 변동형 임대료
-  const currentRent = currentEvent?.type === 'rent_override' ? currentEvent.rent : DAILY_RENT_BASE;
+  const [bgmEnabled, setBgmEnabled] = useState(false);
+  const bgmTimerRef = useRef(null);
+  const nextNoteTimeRef = useRef(0);
+  const currentStepRef = useRef(0);
 
-  // [수정사항 2] 기기 뒤로가기 버튼 이벤트 감지 및 종료 팝업 처리
+  // 정교한 스케줄러 기반 다채널 BGM 루프 제어
   useEffect(() => {
-    const handlePopState = (e) => {
-      // 뒤로가기 동작을 막기 위해 현재 상태를 다시 history에 푸시
-      window.history.pushState(null, null, window.location.pathname);
-      
-      const isConfirmed = window.confirm("게임을 종료하시겠습니까?\n진행사항은 자동 저장됩니다.");
-      if (isConfirmed) {
-        // Capacitor, Cordova, 일반 웹뷰 등 환경에 맞는 앱 종료 처리
-        if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.App) {
-          window.Capacitor.Plugins.App.exitApp();
-        } else if (window.navigator && window.navigator.app && window.navigator.app.exitApp) {
-          window.navigator.app.exitApp();
-        } else {
-          window.close();
-        }
-      }
-    };
+    if (bgmEnabled) {
+      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      if (audioCtx.state === 'suspended') audioCtx.resume();
 
-    // 초기 history state 삽입
-    window.history.pushState(null, null, window.location.pathname);
-    window.addEventListener('popstate', handlePopState);
+      nextNoteTimeRef.current = audioCtx.currentTime + 0.1;
+      currentStepRef.current = 0;
+
+      const scheduleNote = (step, time) => {
+        // 음계 재생 헬퍼 함수
+        const playTone = (note, type, vol, dur) => {
+          if (note === -1) return;
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.type = type;
+          osc.frequency.value = midiToFreq(note);
+          
+          gain.gain.setValueAtTime(0, time);
+          gain.gain.linearRampToValueAtTime(vol, time + 0.02);
+          gain.gain.exponentialRampToValueAtTime(0.001, time + dur);
+          
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+          osc.start(time);
+          osc.stop(time + dur);
+        };
+
+        // 드럼 재생 헬퍼 함수
+        const playDrum = (type) => {
+          if (type === -1) return;
+          const gain = audioCtx.createGain();
+          gain.connect(audioCtx.destination);
+          
+          if (type === 0) { // 묵직한 킥 드럼
+            const osc = audioCtx.createOscillator();
+            osc.connect(gain);
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(120, time);
+            osc.frequency.exponentialRampToValueAtTime(0.01, time + 0.2);
+            gain.gain.setValueAtTime(0.2, time);
+            gain.gain.exponentialRampToValueAtTime(0.001, time + 0.2);
+            osc.start(time);
+            osc.stop(time + 0.2);
+          } else if (type === 1) { // 가벼운 하이햇 소리
+            const osc = audioCtx.createOscillator();
+            osc.connect(gain);
+            osc.type = 'square';
+            osc.frequency.setValueAtTime(8000, time);
+            gain.gain.setValueAtTime(0.01, time);
+            gain.gain.exponentialRampToValueAtTime(0.001, time + 0.05);
+            osc.start(time);
+            osc.stop(time + 0.05);
+          } else if (type === 2) { // 마법 스네어 / 팝 사운드
+            const osc = audioCtx.createOscillator();
+            osc.connect(gain);
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(400, time);
+            osc.frequency.linearRampToValueAtTime(600, time + 0.1);
+            gain.gain.setValueAtTime(0.03, time);
+            gain.gain.exponentialRampToValueAtTime(0.001, time + 0.15);
+            osc.start(time);
+            osc.stop(time + 0.15);
+          }
+        };
+
+        // 각 트랙 동시 재생 (볼륨 및 악기 설정)
+        playTone(BGM_MELODY[step], 'square', 0.03, 0.25);
+        playTone(BGM_BASS[step], 'sawtooth', 0.03, 0.2);
+        playTone(BGM_ARP[step], 'sine', 0.02, 0.15);
+        playDrum(BGM_DRUMS[step]);
+      };
+
+      const scheduler = () => {
+        // 타이머가 조금 늦게 돌더라도, 시간 내에 있는 모든 음표를 예약함
+        while (nextNoteTimeRef.current < audioCtx.currentTime + 0.1) {
+          scheduleNote(currentStepRef.current, nextNoteTimeRef.current);
+          
+          // 110 BPM 속도로 진행 (16분 음표)
+          const secondsPerBeat = 60.0 / 110; 
+          nextNoteTimeRef.current += 0.25 * secondsPerBeat;
+          
+          currentStepRef.current++;
+          if (currentStepRef.current >= 64) {
+            currentStepRef.current = 0; // 루프 반복
+          }
+        }
+        bgmTimerRef.current = setTimeout(scheduler, 25);
+      };
+
+      scheduler(); // 스케줄러 시작
+    } else {
+      if (bgmTimerRef.current) {
+        clearTimeout(bgmTimerRef.current);
+      }
+    }
 
     return () => {
-      window.removeEventListener('popstate', handlePopState);
+      if (bgmTimerRef.current) clearTimeout(bgmTimerRef.current);
     };
-  }, []);
+  }, [bgmEnabled]);
 
   useEffect(() => {
     const saved = localStorage.getItem(SAVE_KEY);
@@ -440,17 +515,19 @@ export default function App() {
 
   useEffect(() => {
     if (appState === 'shop' || appState === 'day_end') {
-      const saveData = { day, money, reputation, inventory, dailyCustomers, currentCustomerIndex, hasUsedLoan, currentEvent };
+      const saveData = { day, money, reputation, inventory, dailyCustomers, currentCustomerIndex };
       localStorage.setItem(SAVE_KEY, JSON.stringify(saveData));
       setHasSaveData(true);
-
+      
       setSaveIndicator(true);
       const timer = setTimeout(() => setSaveIndicator(false), 2000);
       return () => clearTimeout(timer);
     }
-  }, [appState, day, money, reputation, inventory, dailyCustomers, currentCustomerIndex, hasUsedLoan, currentEvent]);
+  }, [appState, day, money, reputation, inventory, dailyCustomers, currentCustomerIndex]);
 
   const loadGame = () => {
+    playSound('click');
+    setBgmEnabled(true);
     const saved = localStorage.getItem(SAVE_KEY);
     if (saved) {
       const data = JSON.parse(saved);
@@ -460,39 +537,32 @@ export default function App() {
       setInventory(data.inventory);
       setDailyCustomers(data.dailyCustomers || []);
       setCurrentCustomerIndex(data.currentCustomerIndex || 0);
-      setHasUsedLoan(data.hasUsedLoan || false);
-      setCurrentEvent(data.currentEvent || null);
       setAppState('shop');
     }
   };
 
   const startGame = () => {
+    playSound('click');
+    setBgmEnabled(true);
     if (hasSaveData && !window.confirm('기존 저장 데이터가 지워집니다. 정말 새로 시작하시겠습니까?')) return;
     setDay(1);
     setMoney(50);
     setReputation(50);
     setInventory({ hintIngredient: 0, hintSlot: 0 });
-    setHasUsedLoan(false);
-    setCurrentEvent(null);
-    
-    setHasSeenTutorial(false);
-    localStorage.removeItem(TUTORIAL_KEY);
-    
-    startNewDay(1, null, true); 
+    startNewDay(1, null);
   };
 
-  /**
-   * 새로운 하루 큐 및 이벤트 생성
-   */
-  const startNewDay = (currentDay, lastDayFinalCustomerType, isNewGame = false) => {
+  const startNewDay = (currentDay, lastDayFinalCustomerType) => {
     const customersCount = 2 + Math.floor(currentDay / 3);
     const queue = [];
-    
-    // 이벤트 생성
-    const newEvent = generateDailyEvent(currentDay, reputation);
-    
+    let lastType = lastDayFinalCustomerType;
+
+    let maxSlotsAllowed = 3;
+    if (currentDay >= 3) maxSlotsAllowed = 4;
+    if (currentDay >= 5) maxSlotsAllowed = 5;
+
     if (currentDay === 1) {
-      if (!hasSeenTutorial || isNewGame) {
+      if (!hasSeenTutorial) {
         setTutorial({ isActive: true, step: 'intro_1' });
       }
       const villagerQuest = ALL_QUESTS.find(q => q.potionName === '깊은 밤의 숙면 물약');
@@ -508,45 +578,17 @@ export default function App() {
         baseReward: 35,
         prescriptionCode: '#TUT0'
       });
-    } 
-    // 대유행(Viral) 이벤트인 경우 큐를 전부 같은 물약 퀘스트로 채움
-    else if (newEvent?.type === 'viral_potion') {
-      const viralPotionName = newEvent.targetId;
-      const potionInfo = POTION_DB[viralPotionName];
-      const matchingQuests = ALL_QUESTS.filter(q => q.potionName === viralPotionName);
-      
-      for(let i=0; i < (customersCount > 5 ? 5 : customersCount); i++) {
-        const quest = matchingQuests[Math.floor(Math.random() * matchingQuests.length)];
-        queue.push({
-          id: i,
-          type: quest.type,
-          emoji: quest.emoji,
-          name: quest.name,
-          dialogue: quest.dialogue,
-          potionName: quest.potionName,
-          slots: potionInfo.slots,
-          maxAttempts: potionInfo.maxAttempts,
-          baseReward: potionInfo.baseReward,
-          prescriptionCode: '#' + Math.random().toString(36).substring(2, 6).toUpperCase()
-        });
-      }
-    } 
-    // 일반 큐 생성
-    else {
-      let maxSlotsAllowed = 3;
-      if (currentDay >= 3) maxSlotsAllowed = 4;
-      if (currentDay >= 5) maxSlotsAllowed = 5;
-
+    } else {
       let availableQuests = ALL_QUESTS.filter(q => POTION_DB[q.potionName].slots <= maxSlotsAllowed && POTION_DB[q.potionName].reqRep <= reputation)
                                       .sort(() => Math.random() - 0.5);
-
-      const usedTypes = new Set([lastDayFinalCustomerType]);
+      
+      const usedTypes = new Set([lastType]);
       const usedPotions = new Set();
 
       for(let i=0; i < (customersCount > 5 ? 5 : customersCount); i++) {
         let quest = availableQuests.find(q => !usedTypes.has(q.type) && !usedPotions.has(q.potionName));
         if (!quest) quest = availableQuests.find(q => !usedPotions.has(q.potionName));
-        if (!quest) quest = availableQuests[0];
+        if (!quest) quest = availableQuests[0]; 
 
         if (quest) {
           usedTypes.add(quest.type);
@@ -570,11 +612,10 @@ export default function App() {
       }
     }
 
-    setCurrentEvent(newEvent);
     setDailyCustomers(queue);
     setCurrentCustomerIndex(0);
     setDay(currentDay);
-    setAppState(newEvent ? 'daily_event' : 'shop');
+    setAppState('shop');
     setIsDiagnosing(false);
     setDiagnosisFeedback(null);
     setDailySalesRevenue(0);
@@ -583,16 +624,19 @@ export default function App() {
 
   const currentCustomer = dailyCustomers[currentCustomerIndex];
 
-  // 상점 아이템 구매
   const buyItem = (type) => {
-    const cost = getCurrentItemCost(type, currentEvent);
-    if (money < cost) return;
+    const cost = ITEM_COSTS[type];
+    if (money < cost) {
+      playSound('fail');
+      return;
+    }
+    playSound('coin');
     setMoney(prev => prev - cost);
     setInventory(prev => ({ ...prev, [type]: prev[type] + 1 }));
   };
 
-  // 다음 손님으로
   const moveToNextCustomer = () => {
+    playSound('click');
     const nextIndex = currentCustomerIndex + 1;
     if (nextIndex >= dailyCustomers.length) {
       setAppState('day_end');
@@ -604,18 +648,16 @@ export default function App() {
     }
   };
 
-  /**
-   * 진단(처방) 핸들러 (오진 시 이벤트에 따른 명성 패널티 조절)
-   */
   const handleDiagnose = (selectedPotion) => {
+    playSound('click');
     if (selectedPotion === currentCustomer.potionName) {
       setDiagnosisFeedback('success');
+      playSound('success');
       setTimeout(() => { acceptOrder(); }, 1200);
     } else {
       setDiagnosisFeedback('fail');
-      let penalty = 10;
-      if (currentEvent?.type === 'critic_day') penalty *= currentEvent.repPenaltyMultiplier; // 비평가 2배 패널티
-      
+      playSound('fail');
+      const penalty = 10;
       setReputation(prev => prev - penalty);
       setTimeout(() => {
         if (reputation - penalty <= 0) {
@@ -629,32 +671,12 @@ export default function App() {
     }
   };
 
-  /**
-   * 정중히 거절 핸들러 (이벤트에 따른 거절 패널티 조절)
-   */
-  const handleReject = () => {
-    setDiagnosisFeedback('reject');
-    let penalty = 2;
-    if (currentEvent?.type === 'critic_day') penalty *= currentEvent.repPenaltyMultiplier; // 비평가 2배 패널티
-
-    setReputation(prev => prev - penalty);
-    setTimeout(() => {
-      if (reputation - penalty <= 0) {
-        setAppState('game_over');
-        localStorage.removeItem(SAVE_KEY);
-        setHasSaveData(false);
-      } else {
-        moveToNextCustomer();
-      }
-    }, 1500);
-  };
-
-  // 미니게임 초기화
   const acceptOrder = () => {
+    playSound('click');
     const slotsCount = currentCustomer.slots;
-
+    
     if (tutorial.isActive) {
-      setSecretRecipe(['8', '2', '9']);
+      setSecretRecipe(['8', '2', '9']); // 튜토리얼 고정 레시피
       setTutorial(p => ({...p, step: 'guess_intro'}));
     } else {
       const fixedRecipe = POTION_DB[currentCustomer.potionName].recipe;
@@ -689,21 +711,23 @@ export default function App() {
     }
   };
 
-  // 재료 클릭 (워들 입력)
   const handleIngredientClick = (id) => {
     if (minigameResult || brewPhase !== 'idle') return;
+    playSound('pop');
 
     if (tutorial.isActive) {
       const allowed = getTutorialAllowedIngredient();
-      if (allowed && id !== allowed) return;
-      if (currentGuess.includes(id)) return;
+      if (allowed && id !== allowed) return; 
+      if (currentGuess.includes(id)) return; 
 
       if (tutorial.step === 'guess_1_1') setTutorial(p => ({...p, step: 'guess_1_2'}));
       if (tutorial.step === 'guess_1_2') setTutorial(p => ({...p, step: 'guess_1_3'}));
       if (tutorial.step === 'guess_1_3') setTutorial(p => ({...p, step: 'free_cost_warning'}));
+      
       if (tutorial.step === 'guess_2_1') setTutorial(p => ({...p, step: 'guess_2_2'}));
       if (tutorial.step === 'guess_2_2') setTutorial(p => ({...p, step: 'guess_2_3'}));
       if (tutorial.step === 'guess_2_3') setTutorial(p => ({...p, step: 'brew_2'}));
+      
       if (tutorial.step === 'guess_3_1') setTutorial(p => ({...p, step: 'guess_3_2'}));
       if (tutorial.step === 'guess_3_2') setTutorial(p => ({...p, step: 'guess_3_3'}));
       if (tutorial.step === 'guess_3_3') setTutorial(p => ({...p, step: 'brew_3'}));
@@ -732,9 +756,9 @@ export default function App() {
     }
   };
 
-  // 가마솥 슬롯 클릭
   const handleSlotClick = (index, guessId) => {
     if (minigameResult || brewPhase !== 'idle' || tutorial.isActive) return;
+    playSound('pop');
 
     if (activeItemMode === 'hintSlot') {
       if (knownSlots[index]) return;
@@ -756,34 +780,19 @@ export default function App() {
     }
   };
 
-  // 조합 (미니게임 제출)
   const handleBrew = () => {
     if (currentGuess.includes(null) || brewPhase !== 'idle') return;
-
-    const brewCost = currentGuess.reduce((total, id) => {
-      const ingredient = INGREDIENTS.find(ing => ing.id === id);
-      return total + (ingredient ? getCurrentIngredientCost(ingredient.cost, id, currentEvent) : 0);
-    }, 0);
-
-    // [수정사항 1] 조합 시 비용이 부족할 때 대출 이벤트 발생
-    if (!tutorial.isActive && money < brewCost) {
-      if (!hasUsedLoan) {
-        setActiveItemMode(null);
-        setSelectedSlotIndex(null);
-        setPendingRoute('minigame'); // 대출 후 미니게임으로 복귀하도록 경로 설정
-        setAppState('loan_event');
-      } else {
-        alert("자금이 부족합니다! 더 저렴한 재료를 조합하거나 상점 아이템을 활용하세요.");
-      }
-      return;
-    }
-
+    playSound('bubble');
     setActiveItemMode(null);
     setSelectedSlotIndex(null);
 
-    const newMoney = tutorial.isActive ? money : money - brewCost;
+    const brewCost = currentGuess.reduce((total, id) => {
+      const ingredient = INGREDIENTS.find(ing => ing.id === id);
+      return total + (ingredient ? ingredient.cost : 0);
+    }, 0);
+
     if (!tutorial.isActive) {
-      setMoney(newMoney);
+      setMoney(prev => prev - brewCost);
       setDailyIngredientCost(prev => prev + brewCost);
     }
 
@@ -791,6 +800,7 @@ export default function App() {
     setEffectText('🔥 끓이는 중...');
 
     setTimeout(() => {
+      playSound('magic');
       setBrewPhase('mixing');
       setEffectText('✨ 마법 융합!');
 
@@ -811,9 +821,18 @@ export default function App() {
         setBrewPhase('idle');
         setEffectText('');
 
+        const isWin = perfect === currentCustomer.slots;
+        const isGameOver = newHistory.length >= currentCustomer.maxAttempts;
+
         if (tutorial.isActive) {
-          if (tutorial.step === 'brew_1') setTutorial(p => ({...p, step: 'explain_1'}));
-          else if (tutorial.step === 'brew_2') setTutorial(p => ({...p, step: 'explain_2'}));
+          if (tutorial.step === 'brew_1') {
+            playSound(perfect > 0 || unstable > 0 ? 'brew_good' : 'brew_bad');
+            setTutorial(p => ({...p, step: 'explain_1'}));
+          }
+          else if (tutorial.step === 'brew_2') {
+            playSound(perfect > 0 || unstable > 0 ? 'brew_good' : 'brew_bad');
+            setTutorial(p => ({...p, step: 'explain_2'}));
+          }
           else if (tutorial.step === 'brew_3') {
             finishOrder(true, newHistory.length);
             setTutorial(p => ({...p, step: 'result_screen'}));
@@ -821,57 +840,47 @@ export default function App() {
         }
 
         if (!tutorial.isActive) {
-          if (perfect === currentCustomer.slots) {
+          if (isWin) {
             finishOrder(true, newHistory.length);
-          } else if (newHistory.length >= currentCustomer.maxAttempts) {
+          } else if (isGameOver) {
             finishOrder(false, newHistory.length);
-          } else if (newMoney < MIN_INGREDIENT_COST) {
-            finishOrder(false, newHistory.length);
+          } else {
+            playSound(perfect > 0 || unstable > 0 ? 'brew_good' : 'brew_bad');
           }
         }
+
       }, 1500);
     }, 1200);
   };
 
-  /**
-   * 주문 완료 계산 (이벤트 기반 보상 보정)
-   */
   const finishOrder = (isWin, attempts) => {
+    playSound(isWin ? 'fanfare' : 'explosion');
     let earnedMoney = 0;
     let earnedRep = 0;
     let tip = 0;
-    const base = getCurrentPotionReward(currentCustomer.baseReward, currentCustomer.potionName, currentEvent);
+    const base = currentCustomer.baseReward;
 
     if (isWin) {
       const remainingAttempts = currentCustomer.maxAttempts - attempts;
-      let tipCalc = Math.floor(base * (remainingAttempts * 0.15));
-      if (currentEvent?.type === 'global_tip') tipCalc = Math.floor(tipCalc * currentEvent.multiplier); // 축제 팁 2배
-
-      tip = tipCalc;
+      tip = Math.floor(base * (remainingAttempts * 0.15));
       earnedMoney = base + tip;
-      
       earnedRep = 10;
-      if (currentEvent?.type === 'critic_day') earnedRep *= currentEvent.repMultiplier; // 비평가 명성 2배
-      if (currentEvent?.type === 'smuggler') earnedRep *= currentEvent.repMultiplier; // 밀수업자 명성 반토막
-
     } else {
       earnedMoney = 0;
       earnedRep = -15;
-      if (currentEvent?.type === 'critic_day') earnedRep *= currentEvent.repPenaltyMultiplier; // 비평가 실패 패널티 2배
     }
 
     setMinigameResult({ status: isWin ? 'win' : 'lose', baseReward: base, tip, earnedMoney, earnedRep, attempts });
   };
 
-  // 상점 복귀 후 반영
   const returnToShop = () => {
+    playSound('coin');
     if (tutorial.isActive) {
       setTutorial({ isActive: true, step: 'day_end_1' });
     }
-
+    
     const newReputation = reputation + minigameResult.earnedRep;
-    const newMoney = money + minigameResult.earnedMoney;
-    setMoney(newMoney);
+    setMoney(prev => prev + minigameResult.earnedMoney);
     setReputation(newReputation);
     if (minigameResult.earnedMoney > 0) {
       setDailySalesRevenue(prev => prev + minigameResult.earnedMoney);
@@ -881,15 +890,6 @@ export default function App() {
       setAppState('game_over');
       localStorage.removeItem(SAVE_KEY);
       setHasSaveData(false);
-    } else if (newMoney < MIN_INGREDIENT_COST) {
-      if (!hasUsedLoan) {
-        setPendingRoute('next_customer');
-        setAppState('loan_event');
-      } else {
-        setAppState('game_over');
-        localStorage.removeItem(SAVE_KEY);
-        setHasSaveData(false);
-      }
     } else {
       moveToNextCustomer();
     }
@@ -902,34 +902,44 @@ export default function App() {
       case 'intro_1': return "마법약 상점의 새 주인이 된 것을 환영합니다!\n오늘 첫 영업을 시작해볼까요?";
       case 'intro_2': return "첫 손님이 기다리고 있네요.\n손님의 이야기를 잘 듣고 아래의\n[처방전 작성하기] 버튼을 누르세요.";
       case 'pick_potion': return "밤새 뒤척여서 잠을 잘 수 없다고 하네요.\n목록에서 [깊은 밤의 숙면 물약]을 선택하세요.";
+      
       case 'guess_intro': return "조제실에 오신 것을 환영합니다!\n이곳에서 3가지 재료를 조합하여\n손님이 주문한 약을 만들어야 합니다.";
       case 'guess_1_1': return "이 물약의 정답 레시피는 아직 모릅니다.\n튜토리얼을 위해 제가 지시하는 재료를 넣어보세요.\n먼저 [밤의 거미줄(🕸️)]을 클릭하세요.";
       case 'guess_1_2': return "좋습니다. 다음으로 [달빛 결정(🌙)]을 클릭하세요.";
       case 'guess_1_3': return "마지막으로 [정령의 눈물(💧)]을 클릭하세요.";
+      
       case 'free_cost_warning': return "재료를 모두 넣었군요!\n원래대로라면 우측 상단에 표시된\n재료비(11G)가 차감되지만...";
       case 'free_cost_warning_2': return "이번 첫 조합은 특별히 재료비를 면제해 드리겠습니다!\n앞으로는 재료를 낭비하지 않도록\n신중하게 조합하세요.";
       case 'brew_1': return "이제 가마솥 아래의\n[조합하기] 버튼을 눌러 결과를 확인해보세요!";
+      
       case 'explain_1': return "결과가 나왔습니다! [완벽 1, 불안정 2]군요.";
       case 'explain_1_continue': return "✨ 완벽: 재료의 종류와 위치가 모두 일치\n⚠️ 불안정: 재료의 종류는 맞지만 위치가 틀림\n\n방금 넣은 세 가지 재료가 모두 정답에 포함된다는 뜻입니다!";
+      
       case 'guess_2_1': return "이번엔 확실한 오답을 걸러내기 위해\n전혀 다른 재료를 넣어볼까요?\n[요정 가루(🧚)]를 클릭하세요.";
       case 'guess_2_2': return "[심해 소금(🌊)]을 클릭하세요.";
       case 'guess_2_3': return "[유니콘 뿔(🦄)]을 클릭하세요.";
       case 'brew_2': return "다시 [조합하기] 버튼을 눌러보세요.\n(이번에도 무료입니다!)";
+      
       case 'explain_2': return "결과 [완벽 0, 불안정 0]이 나왔습니다!\n\n이건 방금 넣은 재료들이 정답에 전혀 쓰이지 않는다는 뜻입니다.\n확실한 오답을 걸러내는 것도 중요합니다!";
+      
       case 'guess_3_1': return "이제 정답을 맞혀봅시다!\n처음에 넣었던 3가지 재료(🕸️,🌙,💧)가 정답임을 알아냈죠?\n위치를 바꿔서 [밤의 거미줄(🕸️)]을 클릭하세요.";
       case 'guess_3_2': return "[정령의 눈물(💧)]을 클릭하세요.";
       case 'guess_3_3': return "[달빛 결정(🌙)]을 클릭하세요.";
       case 'brew_3': return "완벽합니다! 마지막으로\n[조합하기] 버튼을 누르세요!";
+      
       case 'result_screen': return "완벽하게 조제했습니다!\n성공 보수와 남은 기회에 따른 추가 팁을 획득했습니다.";
       case 'return_shop': return "이제 [상점으로 돌아가기] 버튼을 누르세요.";
+      
       case 'day_end_1': return "하루 영업이 끝났습니다!\n정산서를 확인해볼까요?";
       case 'day_end_2': return "오늘 번 [판매 수익]에서\n[사용한 재료비]와 상점 [유지비]를 빼서\n순이익을 계산합니다.";
       case 'day_end_3': return "튜토리얼이 모두 끝났습니다!\n이제 [다음 날 시작하기]를 눌러\n본격적인 상점 운영을 시작하세요!";
+      
       default: return "";
     }
   };
 
   const handleTutorialNext = () => {
+    playSound('click');
     const step = tutorial.step;
     if (step === 'intro_1') setTutorial({ ...tutorial, step: 'intro_2' });
     else if (step === 'guess_intro') setTutorial({ ...tutorial, step: 'guess_1_1' });
@@ -945,14 +955,19 @@ export default function App() {
 
   const isInfoStep = ['intro_1', 'guess_intro', 'free_cost_warning', 'free_cost_warning_2', 'explain_1', 'explain_1_continue', 'explain_2', 'result_screen', 'day_end_1', 'day_end_2'].includes(tutorial.step);
 
-  /* =========================================================================
-   * 상단 상태 바 UI
-   * ========================================================================= */
+  const toggleBgm = () => {
+    playSound('click');
+    setBgmEnabled(!bgmEnabled);
+  };
+
   const renderTopBar = () => (
-    <div className="flex items-center justify-between bg-slate-800 p-3 sm:p-4 rounded-xl border border-slate-700 shadow-md mb-2 sm:mb-4 relative z-20 shrink-0">
+    <div className="flex items-center justify-between bg-slate-800 p-3 sm:p-4 rounded-xl border border-slate-700 shadow-md mb-4 sm:mb-6 relative z-20">
       <div className="flex items-center gap-2 text-purple-300 font-bold text-lg sm:text-xl relative">
         <Store className="w-5 h-5 sm:w-6 sm:h-6" />
         <span>Day {day}</span>
+        <button onClick={toggleBgm} className="ml-2 text-slate-400 hover:text-white bg-slate-700 hover:bg-slate-600 p-1 sm:p-1.5 rounded-lg transition-colors flex items-center justify-center" title="BGM 켜기/끄기">
+          {bgmEnabled ? <Volume2 className="w-4 h-4 sm:w-5 sm:h-5 text-green-400"/> : <VolumeX className="w-4 h-4 sm:w-5 sm:h-5 text-slate-500"/>}
+        </button>
         {saveIndicator && (
           <div className="absolute -top-3 left-0 bg-green-900/80 text-green-300 text-[10px] px-2 py-0.5 rounded-full flex items-center gap-1 animate-pulse border border-green-500 whitespace-nowrap">
             <Save className="w-3 h-3"/> 자동 저장됨
@@ -972,16 +987,9 @@ export default function App() {
     </div>
   );
 
-  const isIntro1 = tutorial.isActive && tutorial.step === 'intro_1';
-
-  /* =========================================================================
-   * 메인 렌더링
-   * ========================================================================= */
-
-  // [start] 타이틀 화면
   if (appState === 'start') {
     return (
-      <div className="h-[100svh] bg-slate-900 flex flex-col items-center justify-center p-4 overflow-y-auto">
+      <div className="min-h-[100dvh] bg-slate-900 flex flex-col items-center justify-center p-4">
         <div className="text-center space-y-4 sm:space-y-6 max-w-md w-full">
           <div className="flex justify-center mb-4 sm:mb-8">
             <div className="relative">
@@ -994,7 +1002,7 @@ export default function App() {
           </h1>
           <p className="text-slate-400 leading-relaxed bg-slate-800 p-3 sm:p-4 rounded-lg border border-slate-700 text-xs sm:text-sm mb-6">
             손님들의 증상을 듣고 올바른 마법약을 처방한 뒤,<br/>
-            <span className="text-purple-300 font-bold">마법약 레시피</span>를 추리하여 완벽하게 조제하세요!<br/><br/>
+            <span className="text-purple-300 font-bold">고정된 마법약 레시피</span>를 추리하여 완벽하게 조제하세요!<br/><br/>
             조제에 성공하여 <span className="text-yellow-400 font-bold">명성이 오르면 새로운 물약이 해금</span>됩니다.<br/>
             오진하거나 조제에 실패하면 명성이 깎이며, 0이 되면 파산합니다.
           </p>
@@ -1020,142 +1028,28 @@ export default function App() {
     );
   }
 
-  // [daily_event] 매일 아침 뉴스/이벤트 표시
-  if (appState === 'daily_event' && currentEvent) {
-    const isBadEvent = ['expensive_ingredients_cost', 'rent_override'].includes(currentEvent.type) || (currentEvent.type === 'ingredient_cost' && currentEvent.multiplier > 1);
-    const isGoodEvent = ['global_tip', 'potion_group_reward', 'free_hints', 'viral_potion'].includes(currentEvent.type) || currentEvent.type === 'potion_reward' || (currentEvent.type === 'ingredient_cost' && currentEvent.multiplier < 1);
-    
-    return (
-      <div className="h-[100svh] bg-slate-900 flex flex-col items-center justify-center p-4 text-center overflow-y-auto">
-        <div className={`bg-slate-800 border-2 rounded-3xl p-8 sm:p-10 max-w-md w-full relative overflow-hidden animate-in zoom-in duration-500 shadow-2xl ${
-          isBadEvent ? 'border-red-500/50 shadow-[0_0_40px_rgba(239,68,68,0.2)]' :
-          isGoodEvent ? 'border-yellow-500/50 shadow-[0_0_40px_rgba(234,179,8,0.2)]' :
-          'border-slate-500/50'
-        }`}>
-          <div className={`absolute top-0 left-0 w-full h-2 bg-gradient-to-r ${isBadEvent ? 'from-red-600 to-red-400' : isGoodEvent ? 'from-yellow-500 to-green-500' : 'from-blue-500 to-purple-500'}`}></div>
-          
-          <div className="flex justify-center mb-4 sm:mb-6">
-            <div className="bg-slate-900 p-4 rounded-full border border-slate-700 shadow-inner relative">
-              {currentEvent.type === 'viral_potion' && <Flame className="w-12 h-12 sm:w-16 sm:h-16 text-orange-500 animate-bounce" />}
-              {currentEvent.type === 'smuggler' && <Skull className="w-12 h-12 sm:w-16 sm:h-16 text-slate-400" />}
-              {currentEvent.type === 'critic_day' && <Eye className="w-12 h-12 sm:w-16 sm:h-16 text-blue-400" />}
-              {currentEvent.type === 'rent_override' && <TrendingUp className="w-12 h-12 sm:w-16 sm:h-16 text-red-500" />}
-              {!['viral_potion', 'smuggler', 'critic_day', 'rent_override'].includes(currentEvent.type) && <Newspaper className={`w-12 h-12 sm:w-16 sm:h-16 ${isBadEvent ? 'text-red-400' : 'text-blue-400'}`} />}
-            </div>
-          </div>
-          
-          <div className="bg-blue-900/30 text-blue-300 text-xs sm:text-sm font-bold px-3 py-1 rounded-full inline-block mb-3 sm:mb-4 border border-blue-500/30">
-            Day {day} 오늘의 특종
-          </div>
-          
-          <h1 className={`text-2xl sm:text-3xl font-black mb-4 ${isBadEvent ? 'text-red-400' : isGoodEvent ? 'text-yellow-400' : 'text-white'}`}>{currentEvent.title}</h1>
-          <p className="text-slate-300 text-sm sm:text-base bg-slate-900/60 p-4 sm:p-5 rounded-xl border border-slate-700/50 leading-relaxed mb-8 break-keep">
-            {currentEvent.message}
-          </p>
-          
-          <button 
-            onClick={() => setAppState('shop')}
-            className="w-full py-4 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl shadow-[0_0_20px_rgba(79,70,229,0.4)] transition-all transform hover:scale-[1.02] flex items-center justify-center gap-2 text-base sm:text-lg"
-          >
-            영업 시작하기 <ArrowRight className="w-5 h-5"/>
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  // [game_over] 파산 화면
   if (appState === 'game_over') {
-    let gameOverMessage = "명성이 바닥에 떨어져 상점 문을 닫습니다...";
-    if (money < 0) {
-      gameOverMessage = "상점 유지비를 내지 못해 쫓겨났습니다...";
-    } else if (reputation > 0 && money < MIN_INGREDIENT_COST) {
-      gameOverMessage = "재료를 살 돈조차 남아있지 않아 파산했습니다...";
-    }
-
     return (
-      <div className="h-[100svh] bg-slate-900 flex flex-col items-center justify-center p-4 text-center overflow-y-auto">
-        <div className="bg-slate-800 border-2 border-red-500/50 rounded-3xl p-8 sm:p-10 max-w-md w-full shadow-[0_0_50px_rgba(239,68,68,0.2)] relative overflow-hidden animate-in zoom-in duration-500">
-          <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-red-600 to-red-400"></div>
-          
-          <div className="flex justify-center mb-6">
-            <div className="relative">
-              <AlertCircle className="w-20 h-20 sm:w-24 sm:h-24 text-red-500 animate-pulse" />
-            </div>
-          </div>
-          
-          <h1 className="text-3xl sm:text-4xl font-black text-white mb-3 tracking-tight">파산했습니다</h1>
-          <p className="text-slate-400 mb-8 text-sm sm:text-base bg-slate-900/50 p-3 rounded-lg border border-slate-700/50">
-            {gameOverMessage}
-          </p>
-          
-          <div className="grid grid-cols-2 gap-4 mb-8">
-            <div className="bg-slate-900 p-4 rounded-2xl border border-slate-700 flex flex-col items-center justify-center">
-              <span className="text-slate-500 text-xs sm:text-sm font-bold mb-1">최종 생존</span>
-              <span className="text-2xl sm:text-3xl font-black text-white">Day {day}</span>
-            </div>
-            <div className="bg-slate-900 p-4 rounded-2xl border border-slate-700 flex flex-col items-center justify-center">
-              <span className="text-slate-500 text-xs sm:text-sm font-bold mb-1">남은 자금</span>
-              <span className="text-2xl sm:text-3xl font-black text-yellow-400 flex items-center gap-1">
-                {money} <Coins className="w-4 h-4 sm:w-5 sm:h-5"/>
-              </span>
-            </div>
-          </div>
-          
-          <button 
-            onClick={startGame} 
-            className="w-full py-4 bg-red-600 hover:bg-red-500 text-white font-bold rounded-xl shadow-[0_0_20px_rgba(220,38,38,0.4)] transition-all transform hover:scale-[1.02] flex items-center justify-center gap-2 text-base sm:text-lg"
-          >
-            <RotateCcw className="w-5 h-5 sm:w-6 sm:h-6"/> 처음부터 다시 시작
-          </button>
+      <div className="min-h-[100dvh] bg-red-950 flex flex-col items-center justify-center p-4 text-center">
+        <AlertCircle className="w-20 h-20 sm:w-24 sm:h-24 text-red-500 mb-4 sm:mb-6 animate-bounce" />
+        <h1 className="text-3xl sm:text-4xl font-black text-red-400 mb-2 sm:mb-4">파산했습니다!</h1>
+        <p className="text-red-200 mb-6 sm:mb-8 text-sm sm:text-lg">명성이 바닥에 떨어져 상점을 닫습니다...</p>
+        <div className="bg-slate-900 p-4 sm:p-6 rounded-xl border border-slate-700 mb-6 sm:mb-8 w-56 sm:w-64">
+          <p className="text-slate-400 mb-1 sm:mb-2 text-sm sm:text-base">최종 기록</p>
+          <p className="text-xl sm:text-2xl font-bold text-white">Day {day}</p>
+          <p className="text-lg sm:text-xl font-bold text-yellow-400 mt-1 sm:mt-2">{money} G</p>
         </div>
+        <button onClick={startGame} className="px-6 py-3 sm:px-8 sm:py-3 bg-red-600 hover:bg-red-500 text-white font-bold rounded-lg flex items-center gap-2 text-sm sm:text-base">
+          <RotateCcw className="w-4 h-4 sm:w-5 sm:h-5"/> 처음부터 다시 시작
+        </button>
       </div>
     );
   }
 
-  // [loan_event] 긴급 구제 금융 화면
-  if (appState === 'loan_event') {
-    return (
-      <div className="h-[100svh] bg-slate-900 flex flex-col items-center justify-center p-4 text-center overflow-y-auto">
-        <div className="bg-slate-800 border-2 border-amber-500/50 rounded-3xl p-8 sm:p-10 max-w-md w-full shadow-[0_0_50px_rgba(245,158,11,0.2)] relative overflow-hidden animate-in zoom-in duration-500">
-          <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-amber-600 to-yellow-400"></div>
-          <div className="flex justify-center mb-6">
-            <div className="relative">
-              <Coins className="w-20 h-20 sm:w-24 sm:h-24 text-amber-500 animate-bounce" />
-            </div>
-          </div>
-          <h1 className="text-2xl sm:text-3xl font-black text-white mb-3 tracking-tight">상인 길드의 구제 금융</h1>
-          <p className="text-slate-300 mb-6 text-sm sm:text-base leading-relaxed bg-slate-900/50 p-3 rounded-lg border border-slate-700/50">
-            자금이 바닥났군요! 하지만 상점의 잠재력을 본 길드에서 <span className="text-yellow-400 font-bold">마지막으로 50G</span>를 대출해 주기로 했습니다.
-          </p>
-          <div className="bg-slate-900 p-4 rounded-xl border border-slate-700 flex justify-between items-center mb-8">
-            <span className="text-slate-400 font-bold">대출 후 보유 자금</span>
-            <span className="text-2xl font-black text-yellow-400 flex items-center gap-1">
-              {money + 50} <Coins className="w-5 h-5"/>
-            </span>
-          </div>
-          <button
-            onClick={() => {
-              setHasUsedLoan(true);
-              setMoney(prev => prev + 50);
-              if (pendingRoute === 'next_customer') moveToNextCustomer();
-              else if (pendingRoute === 'next_day') startNewDay(day + 1, dailyCustomers[dailyCustomers.length - 1].type);
-              else if (pendingRoute === 'minigame') setAppState('minigame'); // [수정사항 1] 미니게임으로 복귀 처리 추가
-            }}
-            className="w-full py-4 bg-amber-600 hover:bg-amber-500 text-white font-bold rounded-xl shadow-[0_0_20px_rgba(217,119,6,0.4)] transition-all transform hover:scale-[1.02] flex items-center justify-center gap-2 text-base sm:text-lg"
-          >
-            50G 받고 재도전하기
-          </button>
-        </div>
-      </div>
-    );
-  }
+  const netProfit = dailySalesRevenue - dailyIngredientCost - DAILY_RENT;
 
-  const netProfit = dailySalesRevenue - dailyIngredientCost - currentRent;
-
-  // 공통 레이아웃 구조 반환
   return (
-    <div className="h-[100svh] bg-slate-900 text-slate-100 p-2 sm:p-4 font-sans selection:bg-purple-500/30 flex flex-col overflow-hidden">
+    <div className="min-h-[100dvh] bg-slate-900 text-slate-100 p-2 sm:p-4 font-sans selection:bg-purple-500/30 flex flex-col">
       <style>{`
         @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-4px); } 50% { transform: translateX(4px); } 75% { transform: translateX(-4px); } }
         .animate-shake { animation: shake 0.3s ease-in-out infinite; }
@@ -1170,8 +1064,6 @@ export default function App() {
         .animate-pulse-glow { animation: pulse-glow 1.5s ease-in-out infinite; }
         @keyframes slideUp { 0% { transform: translateY(100%); opacity: 0; } 100% { transform: translateY(0); opacity: 1; } }
         .animate-slide-up { animation: slideUp 0.4s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; }
-        @keyframes pulse-slow { 0%, 100% { opacity: 0.3; transform: scale(1); } 50% { opacity: 0.6; transform: scale(1.1); } }
-        .animate-pulse-slow { animation: pulse-slow 3s ease-in-out infinite; }
         .custom-scrollbar::-webkit-scrollbar { width: 6px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #475569; border-radius: 10px; }
@@ -1192,7 +1084,7 @@ export default function App() {
         </div>
       )}
 
-      <div className="max-w-2xl mx-auto w-full relative flex-1 flex flex-col min-h-0">
+      <div className="max-w-2xl mx-auto w-full relative overflow-hidden pb-2 sm:pb-4 flex-1 flex flex-col">
         {renderTopBar()}
 
         {showShopModal && (
@@ -1202,7 +1094,7 @@ export default function App() {
                 <h2 className="text-xl sm:text-2xl font-bold text-blue-300 flex items-center gap-2">
                   <ShoppingBag className="w-5 h-5 sm:w-6 sm:h-6" /> 도구 상점
                 </h2>
-                <button onClick={() => setShowShopModal(false)} className="text-slate-400 hover:text-white">
+                <button onClick={() => { playSound('click'); setShowShopModal(false); }} className="text-slate-400 hover:text-white">
                   <X className="w-5 h-5 sm:w-6 sm:h-6" />
                 </button>
               </div>
@@ -1215,10 +1107,10 @@ export default function App() {
                   </div>
                   <button 
                     onClick={() => buyItem('hintIngredient')}
-                    disabled={money < getCurrentItemCost('hintIngredient', currentEvent)}
-                    className={`ml-2 px-2 py-1.5 sm:px-3 sm:py-2 rounded-lg text-xs sm:text-sm font-bold flex flex-col items-center min-w-[60px] sm:min-w-[70px] transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${money < getCurrentItemCost('hintIngredient', currentEvent) ? 'bg-slate-800 text-slate-500 border-slate-700' : 'bg-slate-800 hover:bg-yellow-900 border border-yellow-500 text-yellow-300'}`}
+                    disabled={money < ITEM_COSTS.hintIngredient}
+                    className={`ml-2 px-2 py-1.5 sm:px-3 sm:py-2 rounded-lg text-xs sm:text-sm font-bold flex flex-col items-center min-w-[60px] sm:min-w-[70px] transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${money < ITEM_COSTS.hintIngredient ? 'bg-slate-800 text-slate-500 border-slate-700' : 'bg-slate-800 hover:bg-yellow-900 border border-yellow-500 text-yellow-300'}`}
                   >
-                    <span>{getCurrentItemCost('hintIngredient', currentEvent) === 0 ? '무료!' : `${getCurrentItemCost('hintIngredient', currentEvent)} G`}</span>
+                    <span>{ITEM_COSTS.hintIngredient} G</span>
                     <span className="text-[10px] sm:text-xs text-slate-400">보유: {inventory.hintIngredient}</span>
                   </button>
                 </div>
@@ -1230,190 +1122,125 @@ export default function App() {
                   </div>
                   <button 
                     onClick={() => buyItem('hintSlot')}
-                    disabled={money < getCurrentItemCost('hintSlot', currentEvent)}
-                    className={`ml-2 px-2 py-1.5 sm:px-3 sm:py-2 rounded-lg text-xs sm:text-sm font-bold flex flex-col items-center min-w-[60px] sm:min-w-[70px] transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${money < getCurrentItemCost('hintSlot', currentEvent) ? 'bg-slate-800 text-slate-500 border-slate-700' : 'bg-slate-800 hover:bg-yellow-900 border border-yellow-500 text-yellow-300'}`}
+                    disabled={money < ITEM_COSTS.hintSlot}
+                    className={`ml-2 px-2 py-1.5 sm:px-3 sm:py-2 rounded-lg text-xs sm:text-sm font-bold flex flex-col items-center min-w-[60px] sm:min-w-[70px] transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${money < ITEM_COSTS.hintSlot ? 'bg-slate-800 text-slate-500 border-slate-700' : 'bg-slate-800 hover:bg-yellow-900 border border-yellow-500 text-yellow-300'}`}
                   >
-                    <span>{getCurrentItemCost('hintSlot', currentEvent) === 0 ? '무료!' : `${getCurrentItemCost('hintSlot', currentEvent)} G`}</span>
+                    <span>{ITEM_COSTS.hintSlot} G</span>
                     <span className="text-[10px] sm:text-xs text-slate-400">보유: {inventory.hintSlot}</span>
                   </button>
                 </div>
               </div>
 
               <div className="mt-4 sm:mt-6 text-center text-xs sm:text-sm text-slate-500">
-                {currentEvent?.type === 'free_hints' ? '유성우의 기운으로 오늘 하루 무료입니다!' : '아이템은 조제실(미니게임)에서 사용할 수 있습니다.'}
+                아이템은 조제실(미니게임)에서 사용할 수 있습니다.
               </div>
             </div>
           </div>
         )}
 
-        {/* [shop] 손님 응대 화면 */}
         {appState === 'shop' && currentCustomer && (
-          <div className="bg-slate-900 rounded-t-3xl border-4 border-slate-700 flex-1 min-h-0 overflow-hidden relative shadow-2xl flex flex-col justify-end animate-in fade-in duration-500">
-            
-            {/* 배경: 마법 물약 상점 */}
-            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-indigo-900/60 via-slate-900 to-black overflow-hidden">
-              <div className="absolute top-[10%] right-[15%] text-yellow-500/20 animate-pulse-slow"><Sparkles className="w-24 h-24" /></div>
-              <div className="absolute top-[40%] left-[10%] text-purple-500/20 animate-pulse-slow" style={{animationDelay: '1.5s'}}><Sparkles className="w-16 h-16" /></div>
-
-              {/* 선반 1 */}
-              <div className="absolute top-[25%] w-full h-3 sm:h-4 bg-amber-900/40 border-t border-amber-800/50 shadow-[0_5px_15px_rgba(0,0,0,0.6)]">
-                <div className="absolute bottom-full left-[10%] flex items-end gap-2 sm:gap-4 mb-[-2px]">
-                  <div className="w-4 h-6 sm:w-6 sm:h-8 bg-red-500/80 rounded-t-xl rounded-b-sm shadow-[0_0_15px_rgba(239,68,68,0.4)] border border-red-400/40 relative">
-                    <div className="absolute top-1 left-1 w-1 h-2 bg-white/30 rounded-full"></div>
-                  </div>
-                  <div className="w-6 h-5 sm:w-8 sm:h-6 bg-blue-500/80 rounded-full shadow-[0_0_15px_rgba(59,130,246,0.4)] border border-blue-400/40 mb-0.5 relative">
-                    <div className="absolute top-1 left-2 w-2 h-1 bg-white/30 rounded-full"></div>
-                  </div>
-                  <div className="w-8 h-10 sm:w-10 sm:h-12 bg-purple-900 border-l-4 border-purple-700/80 shadow-lg -rotate-12 transform origin-bottom-left"></div>
-                </div>
-                <div className="absolute bottom-full right-[15%] flex items-end gap-2 mb-[-2px]">
-                   <div className="w-3 h-8 sm:w-4 sm:h-10 bg-green-500/80 rounded-t-sm shadow-[0_0_15px_rgba(34,197,94,0.4)] border border-green-400/40"></div>
-                   <div className="w-5 h-7 sm:w-6 sm:h-9 bg-yellow-500/80 rounded-t-3xl shadow-[0_0_15px_rgba(234,179,8,0.4)] border border-yellow-400/40"></div>
-                </div>
-              </div>
-
-              {/* 선반 2 */}
-              <div className="absolute top-[55%] w-full h-3 sm:h-4 bg-amber-900/40 border-t border-amber-800/50 shadow-[0_5px_15px_rgba(0,0,0,0.6)]">
-                <div className="absolute bottom-full left-[25%] flex items-end gap-1 mb-[-2px]">
-                   <div className="w-5 h-5 sm:w-7 sm:h-7 bg-purple-500/80 rounded-sm shadow-[0_0_15px_rgba(168,85,247,0.4)] border border-purple-400/40 transform rotate-6"></div>
-                   <div className="w-4 h-7 sm:w-5 sm:h-9 bg-cyan-500/80 rounded-t-lg shadow-[0_0_15px_rgba(6,182,212,0.4)] border border-cyan-400/40"></div>
-                </div>
-                <div className="absolute bottom-full right-[25%] flex items-end mb-[-2px]">
-                   <div className="w-12 h-10 sm:w-16 sm:h-12 bg-slate-800 rounded-b-3xl rounded-t-md shadow-lg border-t-2 border-slate-600 relative overflow-hidden">
-                     <div className="absolute top-0 w-full h-2 bg-green-500/50 animate-pulse"></div>
-                   </div>
-                </div>
-              </div>
+          <div className="bg-slate-900 rounded-t-3xl border-4 border-slate-700 flex-1 overflow-hidden relative shadow-2xl flex flex-col justify-end animate-in fade-in duration-500 min-h-[450px]">
+            <div className="absolute inset-0 bg-slate-800/50 flex justify-around p-4">
+              <div className="w-1/4 h-24 sm:h-32 bg-slate-700 rounded-lg border-b-4 border-slate-800 mt-6 sm:mt-10 opacity-50"></div>
+              <div className="w-1/4 h-24 sm:h-32 bg-slate-700 rounded-lg border-b-4 border-slate-800 mt-12 sm:mt-20 opacity-50"></div>
+              <div className="w-1/4 h-24 sm:h-32 bg-slate-700 rounded-lg border-b-4 border-slate-800 mt-6 sm:mt-10 opacity-50"></div>
             </div>
 
-            {!isIntro1 && (
-              <div className="absolute top-3 left-3 sm:top-4 sm:left-4 bg-slate-900/80 px-2 py-1 sm:px-3 sm:py-1 rounded-full text-xs sm:text-sm font-semibold text-slate-300 flex items-center gap-1 sm:gap-2 z-10 border border-slate-700">
-                <Users className="w-3 h-3 sm:w-4 sm:h-4" /> 
-                대기표: {currentCustomerIndex + 1} / {dailyCustomers.length}
-              </div>
-            )}
+            <div className="absolute top-3 left-3 sm:top-4 sm:left-4 bg-slate-900/80 px-2 py-1 sm:px-3 sm:py-1 rounded-full text-xs sm:text-sm font-semibold text-slate-300 flex items-center gap-1 sm:gap-2 z-10 border border-slate-700">
+              <Users className="w-3 h-3 sm:w-4 sm:h-4" /> 
+              대기표: {currentCustomerIndex + 1} / {dailyCustomers.length}
+            </div>
 
-            {!isIntro1 && (
-              <div className="relative z-10 flex flex-col items-center animate-walk-in pt-12 sm:pt-0">
-                <div className="bg-white text-slate-900 p-3 sm:p-5 rounded-2xl rounded-br-none mb-2 sm:mb-4 shadow-xl w-[90%] sm:max-w-sm relative mx-auto animate-pop-up">
-                  <h3 className="text-base sm:text-lg font-black text-slate-800 mb-1">{currentCustomer.name}</h3>
-                  <p className={`text-xs sm:text-base italic font-medium leading-relaxed break-keep transition-colors ${diagnosisFeedback === 'reject' ? 'text-slate-500 font-bold' : 'text-slate-700'}`}>
-                    "{diagnosisFeedback === 'reject' ? REJECT_DIALOGUES[currentCustomer.type] : currentCustomer.dialogue}"
-                  </p>
-                  
-                  <div className="mt-2 sm:mt-4 pt-2 sm:pt-3 border-t border-slate-200 flex justify-between items-end gap-1 sm:gap-2">
-                    <div className="flex flex-col flex-1">
-                      <span className="text-[10px] sm:text-xs text-slate-500 font-bold mb-0.5 sm:mb-1">상태</span>
-                      <span className="bg-slate-100 text-slate-600 px-2 py-1 sm:px-3 sm:py-1 rounded-full text-[10px] sm:text-xs font-bold flex items-center gap-1 w-fit">
-                        <Search className="w-3 h-3" /> 대기중...
-                      </span>
-                    </div>
-                    <div className="flex flex-col items-end">
-                      <span className="text-[10px] sm:text-xs text-slate-500 font-bold mb-0.5 sm:mb-1">예상 보수</span>
-                      <span className={`font-black flex items-center gap-1 text-sm sm:text-base ${['potion_reward', 'potion_group_reward'].includes(currentEvent?.type) && (currentEvent.targetId === currentCustomer.potionName || currentEvent.targets?.includes(currentCustomer.potionName)) ? 'text-green-600 animate-pulse' : 'text-amber-600'}`}>
-                        {getCurrentPotionReward(currentCustomer.baseReward, currentCustomer.potionName, currentEvent)} G
-                        {['potion_reward', 'potion_group_reward'].includes(currentEvent?.type) && (currentEvent.targetId === currentCustomer.potionName || currentEvent.targets?.includes(currentCustomer.potionName)) && (
-                          <TrendingUp className="w-4 h-4 ml-0.5" />
-                        )}
-                      </span>
-                    </div>
+            <div className="relative z-10 flex flex-col items-center animate-walk-in pt-12 sm:pt-0">
+              <div className="bg-white text-slate-900 p-3 sm:p-5 rounded-2xl rounded-br-none mb-2 sm:mb-4 shadow-xl w-[90%] sm:max-w-sm relative mx-auto animate-pop-up">
+                <h3 className="text-base sm:text-lg font-black text-slate-800 mb-1">{currentCustomer.name}</h3>
+                <p className="text-xs sm:text-base text-slate-700 italic font-medium leading-relaxed break-keep">"{currentCustomer.dialogue}"</p>
+                
+                <div className="mt-2 sm:mt-4 pt-2 sm:pt-3 border-t border-slate-200 flex justify-between items-end gap-1 sm:gap-2">
+                  <div className="flex flex-col flex-1">
+                    <span className="text-[10px] sm:text-xs text-slate-500 font-bold mb-0.5 sm:mb-1">상태</span>
+                    <span className="bg-slate-100 text-slate-600 px-2 py-1 sm:px-3 sm:py-1 rounded-full text-[10px] sm:text-xs font-bold flex items-center gap-1 w-fit">
+                      <Search className="w-3 h-3" /> 대기중...
+                    </span>
                   </div>
-                  <div className="absolute -bottom-3 right-6 sm:-bottom-4 sm:right-10 w-0 h-0 border-l-[12px] sm:border-l-[16px] border-l-transparent border-t-[12px] sm:border-t-[16px] border-t-white border-r-[12px] sm:border-r-[16px] border-r-transparent"></div>
-                </div>
-
-                {diagnosisFeedback && (
-                  <div className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 text-2xl sm:text-4xl font-black px-4 sm:px-6 py-3 sm:py-4 rounded-2xl shadow-2xl animate-bounce border-4 whitespace-nowrap flex items-center gap-1 sm:gap-2 ${diagnosisFeedback === 'success' ? 'bg-green-100 text-green-600 border-green-500' : diagnosisFeedback === 'fail' ? 'bg-red-100 text-red-600 border-red-500' : 'bg-slate-100 text-slate-600 border-slate-500'}`}>
-                    {diagnosisFeedback === 'success' ? <><CheckCircle2 className="w-6 h-6 sm:w-10 sm:h-10"/> 성공!</> : diagnosisFeedback === 'fail' ? <><XCircle className="w-6 h-6 sm:w-10 sm:h-10"/> 오진!</> : <><Ban className="w-6 h-6 sm:w-10 sm:h-10"/> 거절함</>}
+                  <div className="flex flex-col items-end">
+                    <span className="text-[10px] sm:text-xs text-slate-500 font-bold mb-0.5 sm:mb-1">예상 보수</span>
+                    <span className="text-amber-600 font-black flex items-center gap-1 text-sm sm:text-base">
+                      {currentCustomer.baseReward} G
+                    </span>
                   </div>
-                )}
-
-                <div className={`text-[80px] sm:text-[120px] leading-none filter drop-shadow-[0_10px_10px_rgba(0,0,0,0.5)] translate-y-2 transition-all ${diagnosisFeedback === 'fail' || diagnosisFeedback === 'reject' ? 'grayscale opacity-50' : ''}`}>
-                  {currentCustomer.emoji}
                 </div>
+                <div className="absolute -bottom-3 right-6 sm:-bottom-4 sm:right-10 w-0 h-0 border-l-[12px] sm:border-l-[16px] border-l-transparent border-t-[12px] sm:border-t-[16px] border-t-white border-r-[12px] sm:border-r-[16px] border-r-transparent"></div>
               </div>
-            )}
+
+              {diagnosisFeedback && (
+                <div className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 text-2xl sm:text-4xl font-black px-4 sm:px-6 py-3 sm:py-4 rounded-2xl shadow-2xl animate-bounce border-4 whitespace-nowrap flex items-center gap-1 sm:gap-2 ${diagnosisFeedback === 'success' ? 'bg-green-100 text-green-600 border-green-500' : 'bg-red-100 text-red-600 border-red-500'}`}>
+                  {diagnosisFeedback === 'success' ? <><CheckCircle2 className="w-6 h-6 sm:w-10 sm:h-10"/> 성공!</> : <><XCircle className="w-6 h-6 sm:w-10 sm:h-10"/> 오진!</>}
+                </div>
+              )}
+
+              <div className={`text-[80px] sm:text-[120px] leading-none filter drop-shadow-[0_10px_10px_rgba(0,0,0,0.5)] translate-y-2 transition-all ${diagnosisFeedback === 'fail' ? 'grayscale opacity-50' : ''}`}>
+                {currentCustomer.emoji}
+              </div>
+            </div>
 
             <div className="bg-amber-900 w-full border-t-[8px] sm:border-t-[12px] border-amber-800 shadow-[0_-10px_30px_rgba(0,0,0,0.5)] z-20 relative shrink-0">
               <div className="absolute top-0 w-full h-1 sm:h-2 bg-white/10"></div>
               
-              {!isIntro1 ? (
-                !isDiagnosing ? (
-                  <div className="h-20 sm:h-32 flex items-center justify-center px-4">
-                    <button 
-                      onClick={() => {
-                        setIsDiagnosing(true);
-                        if (tutorial.isActive && tutorial.step === 'intro_2') {
-                          setTutorial(p => ({ ...p, step: 'pick_potion' }));
-                        }
-                      }}
-                      disabled={diagnosisFeedback !== null || (tutorial.isActive && tutorial.step !== 'intro_2')}
-                      className={`w-full sm:w-auto px-4 py-3 sm:px-8 sm:py-4 hover:bg-indigo-500 text-white font-black text-sm sm:text-xl rounded-xl shadow-[0_6px_0_rgba(67,56,202,1)] sm:shadow-[0_8px_0_rgba(67,56,202,1)] hover:translate-y-[2px] transition-all flex items-center justify-center gap-2 sm:gap-3 animate-fade-in-btn disabled:opacity-50 disabled:cursor-not-allowed ${tutorial.isActive && tutorial.step === 'intro_2' ? 'bg-indigo-500 animate-pulse ring-4 ring-indigo-400' : 'bg-indigo-600'}`}
-                    >
-                      <ScrollText className="w-4 h-4 sm:w-6 sm:h-6" /> 처방전 작성하기
+              {!isDiagnosing ? (
+                <div className="h-20 sm:h-32 flex items-center justify-center px-4">
+                  <button 
+                    onClick={() => {
+                      playSound('click');
+                      setIsDiagnosing(true);
+                      if (tutorial.isActive && tutorial.step === 'intro_2') {
+                        setTutorial(p => ({ ...p, step: 'pick_potion' }));
+                      }
+                    }}
+                    disabled={diagnosisFeedback !== null || (tutorial.isActive && tutorial.step !== 'intro_2')}
+                    className={`w-full sm:w-auto px-4 py-3 sm:px-8 sm:py-4 hover:bg-indigo-500 text-white font-black text-sm sm:text-xl rounded-xl shadow-[0_6px_0_rgba(67,56,202,1)] sm:shadow-[0_8px_0_rgba(67,56,202,1)] hover:translate-y-[2px] transition-all flex items-center justify-center gap-2 sm:gap-3 animate-fade-in-btn disabled:opacity-50 disabled:cursor-not-allowed ${tutorial.isActive && tutorial.step === 'intro_2' ? 'bg-indigo-500 animate-pulse ring-4 ring-indigo-400' : 'bg-indigo-600'}`}
+                  >
+                    <ScrollText className="w-4 h-4 sm:w-6 sm:h-6" /> 처방전 작성하기
+                  </button>
+                </div>
+              ) : (
+                <div className="bg-slate-800 border-t-4 border-slate-600 p-3 sm:p-5 animate-slide-up rounded-t-3xl max-h-[60vh] sm:max-h-[400px] overflow-y-auto custom-scrollbar shadow-[0_-10px_20px_rgba(0,0,0,0.3)]">
+                  <div className="flex justify-between items-center mb-3 sm:mb-4 sticky top-0 bg-slate-800 py-2 z-20">
+                    <h3 className="text-white font-bold flex items-center gap-1 sm:gap-2 text-sm sm:text-lg"><ScrollText className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-400"/> 알맞은 약을 고르세요</h3>
+                    <button onClick={() => { playSound('click'); setIsDiagnosing(false); }} className="text-slate-400 hover:text-white bg-slate-700 p-1.5 rounded-lg transition-colors">
+                      <X className="w-4 h-4 sm:w-5 sm:h-5"/>
                     </button>
                   </div>
-                ) : (
-                  <div className="bg-slate-800 border-t-4 border-slate-600 p-3 sm:p-5 animate-slide-up rounded-t-3xl max-h-[42svh] sm:max-h-[380px] overflow-y-auto custom-scrollbar shadow-[0_-10px_20px_rgba(0,0,0,0.3)] flex flex-col">
-                    <div className="flex justify-between items-center mb-3 sm:mb-4 sticky top-0 bg-slate-800 py-2 z-20">
-                      <h3 className="text-white font-bold flex items-center gap-1 sm:gap-2 text-sm sm:text-lg"><ScrollText className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-400"/> 알맞은 약을 고르세요</h3>
-                      <div className="flex items-center gap-2">
-                        <button 
-                          onClick={handleReject} 
-                          disabled={diagnosisFeedback !== null || tutorial.isActive}
-                          className="text-xs sm:text-sm px-2 py-1 sm:px-3 sm:py-1.5 bg-slate-700 hover:bg-red-900/60 text-slate-300 hover:text-red-400 border border-slate-600 hover:border-red-500/50 rounded-lg transition-colors flex items-center gap-1 disabled:opacity-50"
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
+                    {POTION_CATALOG.filter(potionName => POTION_DB[potionName].reqRep <= reputation || (tutorial.isActive && potionName === '깊은 밤의 숙면 물약')).map((potionName, idx) => {
+                      const isTutorialTarget = tutorial.isActive && potionName === '깊은 밤의 숙면 물약';
+                      const isTutorialDisabled = tutorial.isActive && potionName !== '깊은 밤의 숙면 물약';
+                      return (
+                        <button
+                          key={idx}
+                          onClick={() => handleDiagnose(potionName)}
+                          disabled={diagnosisFeedback !== null || (tutorial.isActive && tutorial.step !== 'pick_potion') || isTutorialDisabled}
+                          className={`p-2 sm:p-3 text-left rounded-lg sm:rounded-xl text-[11px] sm:text-sm font-semibold transition-colors flex items-center gap-2 border ${
+                            isTutorialTarget && tutorial.step === 'pick_potion' ? 'bg-indigo-600 text-white border-indigo-400 animate-pulse ring-2 ring-indigo-500' : 
+                            isTutorialDisabled ? 'bg-slate-800 text-slate-600 border-slate-700 cursor-not-allowed' :
+                            'bg-slate-700 hover:bg-indigo-600 text-slate-200 hover:text-white border-slate-600 hover:border-indigo-400'
+                          }`}
                         >
-                          <Ban className="w-3 h-3 sm:w-4 sm:h-4"/> 정중히 거절 (-{currentEvent?.type === 'critic_day' ? 4 : 2} 명성)
+                          <FlaskConical className="w-3 h-3 sm:w-4 sm:h-4 opacity-70 shrink-0" />
+                          <span className="truncate">{potionName}</span>
                         </button>
-                        <button onClick={() => setIsDiagnosing(false)} className="text-slate-400 hover:text-white bg-slate-700 p-1.5 rounded-lg transition-colors ml-1">
-                          <X className="w-4 h-4 sm:w-5 sm:h-5"/>
-                        </button>
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3 overflow-y-auto pr-1">
-                      {POTION_CATALOG.filter(potionName => POTION_DB[potionName].reqRep <= reputation || (tutorial.isActive && potionName === '깊은 밤의 숙면 물약')).map((potionName, idx) => {
-                        const isTutorialTarget = tutorial.isActive && potionName === '깊은 밤의 숙면 물약';
-                        const isTutorialDisabled = tutorial.isActive && potionName !== '깊은 밤의 숙면 물약';
-                        return (
-                          <button
-                            key={idx}
-                            onClick={() => handleDiagnose(potionName)}
-                            disabled={diagnosisFeedback !== null || (tutorial.isActive && tutorial.step !== 'pick_potion') || isTutorialDisabled}
-                            className={`p-2 sm:p-3 text-left rounded-lg sm:rounded-xl text-[11px] sm:text-sm font-semibold transition-colors flex items-center gap-2 border ${
-                              isTutorialTarget && tutorial.step === 'pick_potion' ? 'bg-indigo-600 text-white border-indigo-400 animate-pulse ring-2 ring-indigo-500' : 
-                              isTutorialDisabled ? 'bg-slate-800 text-slate-600 border-slate-700 cursor-not-allowed' :
-                              'bg-slate-700 hover:bg-indigo-600 text-slate-200 hover:text-white border-slate-600 hover:border-indigo-400'
-                            }`}
-                          >
-                            <FlaskConical className="w-3 h-3 sm:w-4 sm:h-4 opacity-70 shrink-0" />
-                            <span className="truncate">{potionName}</span>
-                          </button>
-                        );
-                      })}
-                    </div>
+                      );
+                    })}
                   </div>
-                )
-              ) : (
-                <div className="h-20 sm:h-32 flex items-center justify-center px-4"></div>
+                </div>
               )}
             </div>
           </div>
         )}
 
-        {/* [minigame] 재료 조합 화면 */}
         {appState === 'minigame' && (
-          <div className="flex flex-col flex-1 min-h-0 gap-2 sm:gap-3 overflow-y-auto pb-2">
-
-            {/* 물약 이름 배너 */}
-            <div className="bg-slate-800 px-3 py-2 sm:px-4 sm:py-2.5 rounded-xl border border-purple-700/60 flex items-center justify-between shrink-0 shadow-sm">
-              <div className="flex items-center gap-2 min-w-0">
-                <FlaskConical className="w-4 h-4 sm:w-5 sm:h-5 text-purple-400 shrink-0" />
-                <span className="text-sm sm:text-base font-bold text-white truncate">{currentCustomer?.potionName}</span>
-              </div>
-              <span className="text-xs text-slate-400 shrink-0 ml-2">
-                {history.length} / {currentCustomer?.maxAttempts} 시도
-              </span>
-            </div>
-
+          <div className="flex flex-col flex-1 gap-3 sm:gap-5 h-full relative overflow-hidden pb-1">
+            
             {minigameResult && (
               <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
                 <div className={`bg-slate-800 border-2 rounded-2xl p-6 sm:p-8 max-w-sm w-full text-center space-y-4 sm:space-y-6 animate-in zoom-in-95 ${minigameResult.status === 'win' ? 'border-green-500 shadow-[0_0_40px_rgba(34,197,94,0.3)]' : 'border-red-500 shadow-[0_0_40px_rgba(239,68,68,0.3)]'}`}>
@@ -1450,12 +1277,6 @@ export default function App() {
                       <p className={`font-bold text-base sm:text-lg flex items-center justify-center gap-1 ${minigameResult.earnedRep > 0 ? 'text-blue-400' : 'text-red-400'}`}>
                         {minigameResult.earnedRep > 0 ? '+' : ''}{minigameResult.earnedRep} <Star className="w-3 h-3 sm:w-4 sm:h-4"/>
                       </p>
-                      {currentEvent?.type === 'critic_day' && (
-                        <span className="text-[10px] text-red-400 font-bold mt-1">비평가 2배 적용!</span>
-                      )}
-                      {currentEvent?.type === 'smuggler' && minigameResult.status === 'win' && (
-                        <span className="text-[10px] text-slate-400 font-bold mt-1">밀수 소문 반토막</span>
-                      )}
                     </div>
                   </div>
 
@@ -1470,60 +1291,54 @@ export default function App() {
               </div>
             )}
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-2 sm:gap-3 shrink-0">
-              <div className={`bg-slate-800 p-2 sm:p-4 rounded-xl border transition-all ${activeItemMode === 'hintIngredient' ? 'animate-pulse-glow' : 'border-slate-700'}`}>
-                <div className="flex justify-between items-center mb-1 sm:mb-3">
+            <div className="bg-slate-800 p-2 sm:p-4 rounded-2xl border border-slate-700 flex flex-wrap gap-2 sm:gap-4 items-center shrink-0 shadow-sm">
+              <span className="hidden sm:flex text-sm text-slate-400 font-bold items-center gap-1.5"><PackageOpen className="w-4 h-4"/> 도구함</span>
+              
+              {activeItemMode && (
+                <span className="w-full sm:w-auto text-center sm:text-left text-[11px] sm:text-sm text-blue-300 animate-pulse font-bold bg-blue-900/40 px-3 py-1.5 rounded-lg mr-auto border border-blue-800/50">
+                  {activeItemMode === 'hintIngredient' ? '감별할 재료 클릭!' : '투시할 칸 클릭!'}
+                </span>
+              )}
+
+              <div className="flex gap-2 w-full sm:w-auto ml-auto">
+                <button 
+                  onClick={() => { playSound('click'); setActiveItemMode(activeItemMode === 'hintIngredient' ? null : 'hintIngredient'); }}
+                  disabled={inventory.hintIngredient <= 0 || brewPhase !== 'idle' || tutorial.isActive}
+                  className={`flex-1 sm:flex-none flex items-center justify-center gap-1.5 sm:gap-2 px-2 py-2 sm:px-4 sm:py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all ${
+                    activeItemMode === 'hintIngredient' 
+                      ? 'bg-indigo-600 text-white shadow-[0_0_15px_rgba(79,70,229,0.8)]' 
+                      : inventory.hintIngredient > 0 && !tutorial.isActive ? 'bg-slate-700 hover:bg-slate-600 text-indigo-300' : 'bg-slate-900 text-slate-600 cursor-not-allowed'
+                  }`}
+                >
+                  <Search className="w-3 h-3 sm:w-4 sm:h-4" /> 돋보기 ({inventory.hintIngredient})
+                </button>
+
+                <button 
+                  onClick={() => { playSound('click'); setActiveItemMode(activeItemMode === 'hintSlot' ? null : 'hintSlot'); }}
+                  disabled={inventory.hintSlot <= 0 || brewPhase !== 'idle' || tutorial.isActive}
+                  className={`flex-1 sm:flex-none flex items-center justify-center gap-1.5 sm:gap-2 px-2 py-2 sm:px-4 sm:py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all ${
+                    activeItemMode === 'hintSlot' 
+                      ? 'bg-purple-600 text-white shadow-[0_0_15px_rgba(147,51,234,0.8)]' 
+                      : inventory.hintSlot > 0 && !tutorial.isActive ? 'bg-slate-700 hover:bg-slate-600 text-purple-300' : 'bg-slate-900 text-slate-600 cursor-not-allowed'
+                  }`}
+                >
+                  <Eye className="w-3 h-3 sm:w-4 sm:h-4" /> 구슬 ({inventory.hintSlot})
+                </button>
+
+                <button 
+                  onClick={() => { playSound('click'); setShowShopModal(true); }}
+                  disabled={tutorial.isActive}
+                  className={`flex-1 sm:flex-none flex items-center justify-center gap-1 px-2 py-2 sm:px-4 sm:py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-colors whitespace-nowrap ${tutorial.isActive ? 'bg-slate-900 text-slate-600 cursor-not-allowed' : 'bg-yellow-900/80 hover:bg-yellow-800 text-yellow-200 border border-yellow-500 shadow-lg'}`}
+                >
+                  <ShoppingBag className="w-3 h-3 sm:w-4 sm:h-4" /> 상점
+                </button>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2 sm:gap-6 shrink-0">
+              <div className={`bg-slate-800 p-3 sm:p-4 rounded-xl border transition-all ${activeItemMode === 'hintIngredient' ? 'animate-pulse-glow' : 'border-slate-700'}`}>
+                <div className="flex justify-between items-center mb-2 sm:mb-4">
                   <h3 className="text-sm sm:text-lg font-semibold text-slate-200">재료 선반</h3>
-                  <div className="flex items-center gap-1">
-                    {activeItemMode && (
-                      <span className="text-[10px] text-blue-300 font-bold animate-pulse mr-0.5">
-                        {activeItemMode === 'hintIngredient' ? '감별할 재료 클릭!' : '투시할 칸 클릭!'}
-                      </span>
-                    )}
-                    <button
-                      onClick={() => setActiveItemMode(activeItemMode === 'hintIngredient' ? null : 'hintIngredient')}
-                      disabled={inventory.hintIngredient <= 0 || brewPhase !== 'idle' || tutorial.isActive}
-                      title={`재료 감별 돋보기 (${inventory.hintIngredient}개)`}
-                      className={`relative p-1.5 rounded-lg transition-all ${
-                        activeItemMode === 'hintIngredient'
-                          ? 'bg-indigo-600 text-white shadow-[0_0_10px_rgba(79,70,229,0.8)]'
-                          : inventory.hintIngredient > 0 && !tutorial.isActive
-                          ? 'bg-slate-700 hover:bg-slate-600 text-indigo-300'
-                          : 'bg-slate-900 text-slate-600 cursor-not-allowed'
-                      }`}
-                    >
-                      <Search className="w-3.5 h-3.5" />
-                      {inventory.hintIngredient > 0 && (
-                        <span className="absolute -top-1 -right-1 bg-indigo-500 text-white text-[8px] w-3.5 h-3.5 rounded-full flex items-center justify-center font-bold leading-none">{inventory.hintIngredient}</span>
-                      )}
-                    </button>
-                    <button
-                      onClick={() => setActiveItemMode(activeItemMode === 'hintSlot' ? null : 'hintSlot')}
-                      disabled={inventory.hintSlot <= 0 || brewPhase !== 'idle' || tutorial.isActive}
-                      title={`슬롯 투시 구슬 (${inventory.hintSlot}개)`}
-                      className={`relative p-1.5 rounded-lg transition-all ${
-                        activeItemMode === 'hintSlot'
-                          ? 'bg-purple-600 text-white shadow-[0_0_10px_rgba(147,51,234,0.8)]'
-                          : inventory.hintSlot > 0 && !tutorial.isActive
-                          ? 'bg-slate-700 hover:bg-slate-600 text-purple-300'
-                          : 'bg-slate-900 text-slate-600 cursor-not-allowed'
-                      }`}
-                    >
-                      <Eye className="w-3.5 h-3.5" />
-                      {inventory.hintSlot > 0 && (
-                        <span className="absolute -top-1 -right-1 bg-purple-500 text-white text-[8px] w-3.5 h-3.5 rounded-full flex items-center justify-center font-bold leading-none">{inventory.hintSlot}</span>
-                      )}
-                    </button>
-                    <button
-                      onClick={() => setShowShopModal(true)}
-                      disabled={tutorial.isActive}
-                      title="도구 상점"
-                      className={`p-1.5 rounded-lg transition-colors relative ${tutorial.isActive ? 'bg-slate-900 text-slate-600 cursor-not-allowed' : 'bg-yellow-900/60 hover:bg-yellow-800 text-yellow-300 border border-yellow-600/40'}`}
-                    >
-                      {currentEvent?.type === 'free_hints' && <div className="absolute -top-1 -right-1 flex h-2 w-2"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span><span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span></div>}
-                      <ShoppingBag className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
                 </div>
                 <div className="grid grid-cols-5 md:grid-cols-5 gap-1 sm:gap-2">
                   {INGREDIENTS.map(item => {
@@ -1533,8 +1348,6 @@ export default function App() {
                     const tutAllowedId = getTutorialAllowedIngredient();
                     const isTutTarget = tutorial.isActive && tutAllowedId === item.id;
                     const isTutDisabled = tutorial.isActive && tutAllowedId !== item.id;
-                    const currentCost = getCurrentIngredientCost(item.cost, item.id, currentEvent);
-                    const isPriceChanged = currentCost !== item.cost;
 
                     return (
                       <button
@@ -1542,21 +1355,16 @@ export default function App() {
                         onClick={() => handleIngredientClick(item.id)}
                         disabled={minigameResult !== null || brewPhase !== 'idle' || (!isItemTarget && !isSelected && !currentGuess.includes(null)) || (activeItemMode === 'hintIngredient' && isKnown) || isTutDisabled}
                         className={`
-                          relative p-1.5 sm:p-3 min-h-[52px] sm:minh-[72px] rounded-xl flex flex-col items-center justify-center transition-all duration-300 border-2
+                          relative p-2 sm:p-3 min-h-[64px] sm:min-h-[80px] rounded-xl flex flex-col items-center justify-center transition-all duration-300 border-2
                           ${isSelected && !activeItemMode ? 'bg-slate-700 border-purple-500 shadow-[0_0_12px_rgba(168,85,247,0.5)] transform scale-105 z-10' : 'bg-slate-900 border-slate-700'}
                           ${isItemTarget ? 'hover:border-indigo-400 hover:shadow-[0_0_12px_rgba(99,102,241,0.5)] cursor-crosshair z-10' : ''}
                           ${(!activeItemMode && !isSelected && !currentGuess.includes(null)) || isTutDisabled ? 'opacity-40 cursor-not-allowed' : 'hover:-translate-y-1'}
                           ${isTutTarget ? 'ring-4 ring-indigo-400 animate-pulse border-indigo-400 bg-indigo-900/30 z-20' : ''}
-                          ${isPriceChanged ? 'overflow-hidden' : ''}
                         `}
                       >
                         <span className="text-2xl sm:text-3xl mb-1 drop-shadow-md">{item.emoji}</span>
                         <span className="text-[9px] sm:text-[11px] text-center text-slate-300 leading-tight break-keep font-medium">{item.name}</span>
-                        <span className={`text-[8px] sm:text-[10px] font-black mt-0.5 flex items-center gap-0.5 ${currentCost > item.cost ? 'text-red-400' : currentCost < item.cost ? 'text-green-400' : 'text-yellow-500'}`}>
-                          {currentCost}G
-                          {currentCost > item.cost && <TrendingUp className="w-2.5 h-2.5" />}
-                          {currentCost < item.cost && <TrendingDown className="w-2.5 h-2.5" />}
-                        </span>
+                        <span className="text-[8px] sm:text-[10px] text-yellow-500 font-black mt-0.5">{item.cost}G</span>
                         
                         {isKnown && (
                           <div className="absolute -top-1.5 -right-1.5 sm:-top-2 sm:-right-2 bg-slate-800 rounded-full w-5 h-5 sm:w-6 sm:h-6 flex items-center justify-center border-2 border-slate-600 shadow-xl text-[10px] sm:text-xs z-20">
@@ -1570,7 +1378,7 @@ export default function App() {
               </div>
 
               <div className={`
-                bg-slate-800 p-2 sm:p-5 rounded-xl border flex flex-col relative overflow-hidden transition-all duration-500
+                bg-slate-800 p-3 sm:p-6 rounded-xl border flex flex-col relative overflow-hidden transition-all duration-500
                 ${brewPhase === 'heating' ? 'border-orange-500 shadow-[0_0_30px_rgba(249,115,22,0.3)] animate-shake' : ''}
                 ${brewPhase === 'mixing' ? 'border-purple-500 shadow-[0_0_40px_rgba(168,85,247,0.5)] animate-pulse-fast bg-slate-700' : ''}
                 ${activeItemMode === 'hintSlot' ? 'animate-pulse-glow' : (!brewPhase || brewPhase === 'idle' ? 'border-slate-700' : '')}
@@ -1584,18 +1392,18 @@ export default function App() {
                   </div>
                 )}
 
-                <h3 className="text-sm sm:text-lg font-semibold text-slate-200 mb-1 sm:mb-3 text-center z-10 relative">투입된 재료 ({currentCustomer.slots}칸)
+                <h3 className="text-sm sm:text-lg font-semibold text-slate-200 mb-2 sm:mb-4 text-center z-10 relative">투입된 재료 ({currentCustomer.slots}칸)
                   {currentGuess.some(id => id !== null) && (
                     <span className="ml-2 text-xs text-red-400 font-normal">
                       {tutorial.isActive ? (
                         <span className="line-through opacity-60">재료비: {currentGuess.reduce((sum, id) => {
                           const ing = id ? INGREDIENTS.find(i => i.id === id) : null;
-                          return sum + (ing ? getCurrentIngredientCost(ing.cost, id, currentEvent) : 0);
+                          return sum + (ing ? ing.cost : 0);
                         }, 0)}G</span>
                       ) : (
                         <span>재료비: {currentGuess.reduce((sum, id) => {
                           const ing = id ? INGREDIENTS.find(i => i.id === id) : null;
-                          return sum + (ing ? getCurrentIngredientCost(ing.cost, id, currentEvent) : 0);
+                          return sum + (ing ? ing.cost : 0);
                         }, 0)}G</span>
                       )}
                       {tutorial.isActive && <span className="ml-2 text-green-400 font-black text-sm">무료!</span>}
@@ -1603,7 +1411,7 @@ export default function App() {
                   )}
                 </h3>
                 
-                <div className="flex justify-center gap-2 sm:gap-3 mb-2 sm:mb-5 z-10 relative flex-1 items-center w-full">
+                <div className="flex justify-center gap-2 sm:gap-4 mb-4 sm:mb-8 z-10 relative flex-1 items-center w-full">
                   {Array.from({ length: currentCustomer?.slots || 3 }).map((_, index) => {
                     const guessId = currentGuess[index];
                     const item = guessId ? getIngredientDetails(guessId) : null;
@@ -1617,7 +1425,7 @@ export default function App() {
                         key={index} 
                         onClick={() => handleSlotClick(index, guessId)}
                         className={`
-                          relative w-10 h-10 sm:w-14 sm:h-14 md:w-18 md:h-18 shrink-0 rounded-full border-2 flex items-center justify-center text-xl sm:text-3xl transition-all duration-300
+                          relative w-12 h-12 sm:w-16 sm:h-16 md:w-20 md:h-20 shrink-0 rounded-full border-2 flex items-center justify-center text-2xl sm:text-4xl transition-all duration-300
                           ${item ? 'bg-slate-800 border-purple-400 shadow-[inset_0_0_15px_rgba(168,85,247,0.5)]' : 'bg-slate-900 border-slate-700 border-dashed'}
                           ${isItemTarget ? 'cursor-crosshair hover:border-purple-400 hover:shadow-[0_0_12px_rgba(168,85,247,0.5)]' : (item && !activeItemMode && !tutorial.isActive ? 'cursor-pointer hover:scale-105' : '')}
                           ${isSelectedEmptySlot && !tutorial.isActive ? 'border-blue-400 shadow-[0_0_12px_rgba(96,165,250,0.6)] animate-pulse cursor-pointer bg-blue-900/20' : (!item && !activeItemMode && !tutorial.isActive ? 'cursor-pointer hover:border-slate-500 hover:bg-slate-800/50' : '')}
@@ -1636,12 +1444,11 @@ export default function App() {
                   })}
                 </div>
                 
-                {/* [수정사항 1] 버튼의 disabled 조건에서 자금 부족 조건 삭제 */}
                 <button
                   onClick={handleBrew}
                   disabled={currentGuess.includes(null) || minigameResult !== null || brewPhase !== 'idle' || activeItemMode !== null || (tutorial.isActive && !tutorial.step.startsWith('brew_'))}
                   className={`
-                    w-full py-2.5 sm:py-4 font-extrabold rounded-xl transition-all shadow-lg flex items-center justify-center gap-2 sm:gap-3 text-sm sm:text-lg z-10 relative
+                    w-full py-3 sm:py-4 font-extrabold rounded-xl transition-all shadow-lg flex items-center justify-center gap-2 sm:gap-3 text-sm sm:text-lg z-10 relative
                     ${(brewPhase !== 'idle' || activeItemMode || (tutorial.isActive && !tutorial.step.startsWith('brew_'))) ? 'bg-slate-600 text-slate-400 cursor-not-allowed' : 'bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white hover:shadow-[0_0_15px_rgba(168,85,247,0.4)]'}
                     ${tutorial.isActive && tutorial.step.startsWith('brew_') ? 'ring-4 ring-indigo-400 animate-pulse' : ''}
                   `}
@@ -1655,7 +1462,7 @@ export default function App() {
               </div>
             </div>
 
-            <div className="bg-slate-800 rounded-xl border border-slate-700 shadow-inner flex flex-col shrink-0 min-h-[100px] max-h-[28svh] overflow-hidden">
+            <div className="bg-slate-800 rounded-xl border border-slate-700 shadow-inner flex flex-col flex-1 min-h-[160px] overflow-hidden shrink-0 mt-1">
               <div className="bg-slate-800/80 border-b border-slate-700 p-2 text-[10px] sm:text-xs text-slate-300 flex items-center gap-3 justify-center z-10 shrink-0">
                 <Info className="w-3 h-3 text-slate-400 shrink-0"/>
                 <span className="flex items-center gap-1">
@@ -1706,82 +1513,55 @@ export default function App() {
           </div>
         )}
 
-        {/* [day_end] 하루 마감 화면 */}
         {appState === 'day_end' && (
-          <div className="flex flex-col flex-1 min-h-0 gap-3 sm:gap-5 overflow-y-auto max-w-md mx-auto w-full animate-slide-up pb-4 px-2 pt-2 justify-center">
-            <div className="bg-slate-800 rounded-3xl border border-slate-700 shadow-[0_0_40px_rgba(0,0,0,0.5)] p-5 sm:p-8 relative overflow-hidden">
-              <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500"></div>
+          <div className="flex flex-col flex-1 gap-4 sm:gap-6 justify-center max-w-md mx-auto w-full animate-slide-up pb-6 px-2">
+            <div className="bg-slate-800 rounded-3xl border border-slate-700 shadow-2xl p-6 sm:p-8 relative overflow-hidden">
+              <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-indigo-500 to-purple-500"></div>
 
-              <div className="text-center mb-6 sm:mb-8 mt-2">
-                <div className="inline-flex items-center justify-center w-16 h-16 sm:w-20 sm:h-20 bg-indigo-900/50 rounded-2xl border border-indigo-500/30 mb-4 transform rotate-3">
-                  <ScrollText className="w-8 h-8 sm:w-10 sm:h-10 text-indigo-400 -rotate-3" />
-                </div>
-                <h2 className="text-2xl sm:text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-indigo-300 to-purple-300 mb-2">Day {day} 마감 정산</h2>
-                <p className="text-slate-400 text-sm">오늘 하루의 상점 영업 기록입니다.</p>
+              <div className="text-center mb-8 mt-2">
+                <ScrollText className="w-12 h-12 text-indigo-400 mx-auto mb-3" />
+                <h2 className="text-2xl font-black text-white mb-1">Day {day} 마감</h2>
+                <p className="text-slate-400 text-sm">오늘 하루의 영업 기록</p>
               </div>
 
-              <div className="space-y-3 mb-6 bg-slate-900/60 p-4 sm:p-5 rounded-2xl border border-slate-700/50 relative">
-                {currentEvent?.type === 'rent_override' && (
-                  <div className="absolute -top-3 -right-2 bg-red-600/90 text-white text-[10px] font-bold px-2 py-1 rounded-lg animate-pulse z-10 shadow-lg border border-red-400">
-                    임대료 폭등!
-                  </div>
-                )}
-                <div className="flex justify-between items-center">
-                  <span className="text-slate-300 font-medium flex items-center gap-2 text-sm sm:text-base"><Coins className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-400"/> 판매 수익</span>
+              <div className="space-y-3 mb-8">
+                <div className="flex justify-between items-center bg-slate-900/50 p-3 sm:p-4 rounded-xl border border-slate-700/50">
+                  <span className="text-slate-300 font-semibold flex items-center gap-2 text-sm sm:text-base"><Coins className="w-4 h-4 text-yellow-400"/> 판매 수익</span>
                   <span className="text-yellow-400 font-bold text-base sm:text-lg">+{dailySalesRevenue} G</span>
                 </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-slate-300 font-medium flex items-center gap-2 text-sm sm:text-base"><FlaskConical className="w-4 h-4 sm:w-5 sm:h-5 text-red-400"/> 재료 비용</span>
+                <div className="flex justify-between items-center bg-slate-900/50 p-3 sm:p-4 rounded-xl border border-slate-700/50">
+                  <span className="text-slate-300 font-semibold flex items-center gap-2 text-sm sm:text-base"><FlaskConical className="w-4 h-4 text-red-400"/> 재료비</span>
                   <span className="text-red-400 font-bold text-base sm:text-lg">-{dailyIngredientCost} G</span>
                 </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-slate-300 font-medium flex items-center gap-2 text-sm sm:text-base"><Store className="w-4 h-4 sm:w-5 sm:h-5 text-orange-400"/> 상점 유지비</span>
-                  <span className={`font-bold text-base sm:text-lg ${currentEvent?.type === 'rent_override' ? 'text-red-400 scale-110' : 'text-orange-400'}`}>-{currentRent} G</span>
-                </div>
-                
-                <div className="w-full h-px bg-slate-700/50 my-3"></div>
-                
-                <div className="flex justify-between items-center">
-                  <span className={`font-bold text-base sm:text-lg ${netProfit >= 0 ? 'text-green-400' : 'text-red-400'}`}>{netProfit >= 0 ? '오늘의 순이익' : '오늘의 순손실'}</span>
-                  <span className={`font-black text-xl sm:text-2xl ${netProfit >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                    {netProfit > 0 ? '+' : ''}{netProfit} G
-                  </span>
+                <div className="flex justify-between items-center bg-slate-900/50 p-3 sm:p-4 rounded-xl border border-slate-700/50">
+                  <span className="text-slate-300 font-semibold flex items-center gap-2 text-sm sm:text-base"><Store className="w-4 h-4 text-orange-400"/> 상점 유지비</span>
+                  <span className="text-orange-400 font-bold text-base sm:text-lg">-{DAILY_RENT} G</span>
                 </div>
               </div>
 
-              <div className="flex justify-between items-center bg-slate-700/30 p-4 rounded-xl border border-slate-600/50 mb-6">
-                <span className="text-slate-300 font-medium">최종 보유 자금</span>
-                <span className="text-white font-black flex items-center gap-2 text-xl sm:text-2xl">
-                  {money} <Coins className="w-5 h-5 sm:w-6 sm:h-6 text-yellow-400"/>
-                </span>
+              <div className={`flex justify-between items-center p-4 sm:p-5 rounded-xl border-2 mb-8 ${netProfit >= 0 ? 'bg-green-900/20 border-green-500/50' : 'bg-red-900/20 border-red-500/50'}`}>
+                <span className={`font-bold ${netProfit >= 0 ? 'text-green-400' : 'text-red-400'}`}>{netProfit >= 0 ? '순이익' : '순손실'}</span>
+                <span className={`font-black text-2xl ${netProfit >= 0 ? 'text-green-400' : 'text-red-400'}`}>{netProfit > 0 ? '+' : ''}{netProfit} G</span>
+              </div>
+
+              <div className="flex justify-between items-center px-2 mb-8">
+                <span className="text-slate-400 font-medium text-sm sm:text-base">최종 보유 자금</span>
+                <span className="text-white font-bold flex items-center gap-1.5 text-lg sm:text-xl"><Coins className="w-5 h-5 text-yellow-400"/> {money} G</span>
               </div>
 
               <button
                 onClick={() => {
+                  playSound('coin');
                   if (tutorial.isActive) {
                     setTutorial({ isActive: false, step: '' });
                     setHasSeenTutorial(true);
                     localStorage.setItem(TUTORIAL_KEY, 'true');
                   }
-                  
-                  const nextMoney = money - currentRent;
-                  setMoney(nextMoney);
-                  
-                  if (nextMoney < 0 || (reputation > 0 && nextMoney < MIN_INGREDIENT_COST)) {
-                    if (!hasUsedLoan && reputation > 0) {
-                      setPendingRoute('next_day');
-                      setAppState('loan_event');
-                    } else {
-                      setAppState('game_over');
-                      localStorage.removeItem(SAVE_KEY);
-                      setHasSaveData(false);
-                    }
-                  } else {
-                    startNewDay(day + 1, dailyCustomers[dailyCustomers.length - 1].type);
-                  }
+                  setMoney(prev => prev - DAILY_RENT);
+                  startNewDay(day + 1, dailyCustomers[dailyCustomers.length - 1].type);
                 }}
                 disabled={tutorial.isActive && tutorial.step !== 'day_end_3'}
-                className={`w-full py-4 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl shadow-[0_0_20px_rgba(79,70,229,0.4)] transition-all transform hover:scale-[1.02] flex items-center justify-center gap-2 text-base sm:text-lg disabled:opacity-50 disabled:cursor-not-allowed ${tutorial.isActive && tutorial.step === 'day_end_3' ? 'ring-4 ring-indigo-400 animate-pulse' : ''}`}
+                className={`w-full py-4 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl transition-all shadow-[0_4px_0_rgba(67,56,202,1)] hover:translate-y-[2px] hover:shadow-[0_2px_0_rgba(67,56,202,1)] flex items-center justify-center gap-2 text-base sm:text-lg disabled:opacity-50 disabled:cursor-not-allowed ${tutorial.isActive && tutorial.step === 'day_end_3' ? 'ring-4 ring-indigo-400 animate-pulse' : ''}`}
               >
                 다음 날 시작하기 <ArrowRight className="w-5 h-5"/>
               </button>
