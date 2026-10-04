@@ -176,7 +176,7 @@ class _ShopScreenState extends State<ShopScreen> {
       PotionSelection(key: ValueKey(visitorId), game: game, enabled: canServe,
         order: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           Text(game.orders[game.customer].$1, style: TextStyle(color: brass, fontSize: 17)),
-          const SizedBox(height: 12), Text(game.orders[game.customer].$2),
+          const SizedBox(height: 12), GameParagraph(game.orders[game.customer].$2),
           TextButton(onPressed: () { setState(() => responseText = game.orderClarification); }, child: const Text('어떤 효능이 필요하세요?')),
       TextButton(onPressed: canServe ? () {
         final wanted = game.orders[game.customer].$3;
@@ -198,12 +198,14 @@ class _ShopScreenState extends State<ShopScreen> {
             game.customer != customerBefore ? '손님이 구매하지 않고 떠났어요 · 놓친 주문 +1' : '');
         }),
     ] else ...[
-      Text(game.night ? '연구실 · 어둠 속 시야' : '영업 마감', style: const TextStyle(color: brass, fontSize: 16)),
+      Text(game.night ? '내일의 영업 준비' : '영업 마감', style: const TextStyle(color: brass, fontSize: 16)),
       Text('판매 ${game.served}건 · 매출 ${game.revenue} G · 지출 ${game.spending + game.investment} G', style: const TextStyle(fontSize: 12)),
       const SizedBox(height: 8),
       if (!game.night) PixelButton(label: '밤 연구실로 가기', icon: Icons.nightlight_round,
-        onPressed: () { if (game.startNight()) change('촛불을 켰어요. 손님의 부탁을 새로운 레시피로 바꿔 볼까요?'); }),
+        onPressed: () { if (game.startNight()) change(game.knows('sight') ? '작업대에서 내일 팔 물약을 준비하세요.' : '엘리의 부탁을 연구할 시간이에요.'); }),
       if (game.night) ...[
+        Text('남은 물약 · 숙면 ${game.stock['sleep']}병 · 시야 ${game.stock['sight']}병', style: const TextStyle(color: brass, fontSize: 15)),
+        const SizedBox(height: 12),
         if (game.researchRequested && !game.knows('sight')) PixelButton(label: '엘리의 물약 연구하기', icon: Icons.science, onPressed: research),
         const SizedBox(height: 6),
         PixelButton(label: '준비를 마치고 ${game.day + 1}일째 시작', icon: Icons.wb_sunny_outlined,

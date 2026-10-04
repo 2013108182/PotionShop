@@ -30,7 +30,7 @@ void main() {
             await tester.tap(find.byTooltip('손님 대화')); await tester.pumpAndSettle();
           }
           await tester.tap(find.text('물약 고르기')); await tester.pumpAndSettle();
-          final choice = find.widgetWithText(OutlinedButton, text.startsWith('시야') ? '올빼미의 시야 물약' : '깊은 밤의 숙면 물약');
+          final choice = find.widgetWithText(OutlinedButton, text.startsWith('시야') ? '올빼미의\n시야 물약' : '깊은 밤의\n숙면 물약');
           await tester.ensureVisible(choice); await tester.tap(choice); await tester.pumpAndSettle();
         }
         final button = find.widgetWithText(FilledButton, text.contains('한 병 건네기') ? '물약 건네기' : text);

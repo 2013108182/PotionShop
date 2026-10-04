@@ -128,7 +128,7 @@ class _ResearchStudioState extends State<ResearchStudio> {
   ]);
   Widget mark(String id, {double size = 28}) => IngredientSprite(id: id, size: size);
   Widget shelf(bool compact) => frame(Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-    if (!compact) heading('INGREDIENTS', '재료 선반') else const Text('재료 선반 · 칸을 고른 뒤 재료를 눌러요', style: TextStyle(color: _cream, fontSize: 12)),
+    if (!compact) heading('재료의 성질', '재료 선반') else const Text('재료 선반 · 칸을 고른 뒤 재료를 눌러요', style: TextStyle(color: _cream, fontSize: 12)),
     const SizedBox(height: 8),
     GridView(shrinkWrap: true, physics: const NeverScrollableScrollPhysics(), gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 3,
       mainAxisSpacing: 7, crossAxisSpacing: 7, mainAxisExtent: compact ? 50 : null, childAspectRatio: .95),
@@ -141,7 +141,7 @@ class _ResearchStudioState extends State<ResearchStudio> {
             shape: const RoundedRectangleBorder(), side: BorderSide(color: session.slots.contains(i.id) ? _gold : _line, width: 2)),
           onPressed: brewing || session.solved ? null : () => place(i.id),
           child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-            mark(i.id, size: compact ? 24 : 64), Text(i.name, style: TextStyle(fontSize: compact ? 10 : 12)),
+            mark(i.id, size: compact ? 24 : 64), Text(i.name, style: TextStyle(fontSize: compact ? 11 : 14)),
             if (!compact) Text(session.slots.contains(i.id) ? '${session.slots.indexOf(i.id) + 1}번째 칸' : '선택', style: const TextStyle(color: _muted, fontSize: 10)),
           ])),
         )),
@@ -149,7 +149,7 @@ class _ResearchStudioState extends State<ResearchStudio> {
     const SizedBox(height: 8),
     if (!compact) const Spacer(),
     Text('${ingredientName(inspecting)} · ${ingredients.firstWhere((i) => i.id == inspecting).lore}',
-      maxLines: compact ? 2 : 4, overflow: TextOverflow.ellipsis, style: TextStyle(color: _muted, fontSize: compact ? 10 : 13)),
+      maxLines: compact ? 2 : 4, overflow: TextOverflow.ellipsis, style: TextStyle(color: _muted, fontSize: compact ? 12 : 15)),
     if (!compact) const Padding(padding: EdgeInsets.only(top: 14), child: Text('빛이나 감각에 관련된 재료를 살펴보세요.\n넣는 순서는 실험 결과로 알아내야 해요.', style: TextStyle(color: _gold, fontSize: 12))),
   ]));
   Widget slot(int index, bool compact) {
@@ -174,7 +174,7 @@ class _ResearchStudioState extends State<ResearchStudio> {
         ]))));
   }
   Widget bench(bool compact) => frame(Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-    if (!compact) ...[heading('MIXING TABLE', '조합 작업대'), const SizedBox(height: 14)],
+    if (!compact) ...[heading('넣는 순서', '조합 작업대'), const SizedBox(height: 14)],
     Row(children: [slot(0, compact), const SizedBox(width: 8), slot(1, compact), const SizedBox(width: 8), slot(2, compact)]),
     const SizedBox(height: 6),
     Text(session.solved ? '발견한 순서를 레시피로 보관했어요.' : '${session.activeSlot + 1}번째 칸 선택 중 · 이미 넣은 재료를 누르면 두 칸이 바뀌어요.',
@@ -185,7 +185,7 @@ class _ResearchStudioState extends State<ResearchStudio> {
     const SizedBox(height: 6),
     Semantics(liveRegion: true, child: Text(brewing ? reactionWords[reactionPhase] : feedback,
       textAlign: TextAlign.center, maxLines: compact ? 2 : 3, overflow: TextOverflow.ellipsis,
-      style: TextStyle(color: session.solved ? _green : _cream, fontSize: compact ? 11 : 13))),
+      style: TextStyle(color: session.solved ? _green : _cream, fontSize: compact ? 12 : 15))),
     const SizedBox(height: 8),
     if (brewing || pendingResult != null) ...[
       Row(mainAxisAlignment: MainAxisAlignment.center, children: [for (var i = 0; i < 3; i++) Padding(
@@ -203,7 +203,7 @@ class _ResearchStudioState extends State<ResearchStudio> {
       child: const Text('상점으로 돌아가기', style: TextStyle(color: _gold))),
   ]));
   Widget notes(bool compact) => frame(Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-    if (!compact) heading('EXPERIMENT LOG', '실험 노트', paper: true)
+    if (!compact) heading('지난 실험', '실험 노트', paper: true)
     else Text('실험 노트 · ${session.attempts.length}회', style: const TextStyle(color: _ink, fontSize: 13, fontWeight: FontWeight.bold)),
     const SizedBox(height: 6),
     const Text('완벽: 재료·순서 일치\n불안정: 재료만 일치', style: TextStyle(color: Color(0xff77563f), fontSize: 11)),
@@ -242,7 +242,7 @@ class _ResearchStudioState extends State<ResearchStudio> {
       final wide = size.maxWidth >= 1050;
       final mobileBenchHeight = session.solved ? 454.0 : 414.0;
       return Container(decoration: const BoxDecoration(gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight,
-        colors: [Color(0xff281b38), Color(0xff171020)])), child: Center(child: ConstrainedBox(constraints: BoxConstraints(maxWidth: wide ? 1480 : 760),
+        colors: [Color(0xff281b38), Color(0xff171020)])), child: Center(child: ConstrainedBox(constraints: BoxConstraints(maxWidth: wide ? 1380 : 760, maxHeight: wide ? 820 : double.infinity),
         child: Padding(padding: EdgeInsets.all(padding), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           Row(children: [const GameIcon(GameGlyph.flask, size: 24), const SizedBox(width: 8),
             const Expanded(child: Text('달빛 연구실', style: TextStyle(color: _cream, fontSize: 20, fontWeight: FontWeight.bold))),

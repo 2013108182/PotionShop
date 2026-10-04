@@ -172,14 +172,14 @@ class _ShopWorldState extends State<ShopWorld> with SingleTickerProviderStateMix
           child: Tooltip(message: '손님 대화', child: SpeechFrame(child: FilledButton(
             style: FilledButton.styleFrom(backgroundColor: Colors.transparent, foregroundColor: worldInk, shadowColor: Colors.transparent, minimumSize: const Size(64, 38), shape: const RoundedRectangleBorder()),
             onPressed: widget.onTalk ?? () => setState(() => speechOpen = !speechOpen), child: AnimatedBuilder(animation: paintClock, builder: (context, _) => Semantics(label: '손님과 대화하기', child: ExcludeSemantics(child: Row(mainAxisSize: MainAxisSize.min, children: [for (var i = 0; i < 3; i++) Transform.translate(offset: Offset(0, reduced ? 0 : -4 * math.max(0, math.sin(paintClock.value * 5 - i * .9))), child: const Padding(padding: EdgeInsets.symmetric(horizontal: 2), child: Text('·', style: TextStyle(fontSize: 25, fontWeight: FontWeight.bold))))])))))))),
-        if (widget.dialogueVisible ?? speechOpen) Positioned(left: math.max(12, math.min(left + 282 * scale, constraints.maxWidth - bubbleWidth - 12)),
+        Positioned(left: math.max(12, math.min(left + 282 * scale, constraints.maxWidth - bubbleWidth - 12)),
           top: math.max(8, math.min(top + 105 * scale, constraints.maxHeight - bubbleHeight - 8)), width: bubbleWidth,
-          child: SpeechFrame(key: const ValueKey('npc-speech'), child: Padding(padding: const EdgeInsets.all(20),
+          child: GameReveal(visible: widget.dialogueVisible ?? speechOpen, child: SpeechFrame(key: const ValueKey('npc-speech'), child: Padding(padding: const EdgeInsets.all(20),
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
               Text(widget.customerName, style: const TextStyle(color: Color(0xff765037), fontSize: 13)),
               const SizedBox(height: 8), Text(wrappedSpeech, semanticsLabel: widget.speech, style: speechStyle),
               if (widget.onDialogueAction != null) ...[const SizedBox(height: 12), GameAction(label: widget.dialogueAction, onPressed: widget.onDialogueAction)],
-            ])))),
+            ]))))),
       ],
       if (catMessage.isNotEmpty) Positioned(left: left + 440 * scale, top: top + 144 * scale,
         child: _WorldBubble(catMessage)),    ]);
@@ -422,9 +422,9 @@ class _ShopViewportState extends State<ShopViewport> {
           child: Text(widget.guildLabel!, style: const TextStyle(color: Color(0xff392433), fontSize: 13))))),
       SkinPanel(skin: Skin.dialogue, child: Padding(padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
         child: Row(mainAxisSize: MainAxisSize.min, children: [const GameIcon(GameGlyph.coin, size: 24), const SizedBox(width: 6), Text(widget.goldLabel, style: const TextStyle(color: worldGold, fontSize: 18))]))),
-      IconButton(tooltip: panelOpen ? '패널 접기' : '손님 응대 열기',
+      SizedBox(width: 48, height: 48, child: panelOpen ? null : IconButton(tooltip: talking ? '대화 닫기' : '손님 응대 열기',
         icon: GameIcon(panelOpen || talking ? GameGlyph.close : GameGlyph.talk),
-        onPressed: panelOpen || talking ? close : () => menu(0)),
+        onPressed: panelOpen || talking ? close : () => menu(0))),
     ])),
     SizedBox(height: 42, child: widget.systemMessage.isEmpty ? null : Align(alignment: Alignment.center, child:
       SkinPanel(skin: Skin.dialogue, child: Padding(padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
@@ -432,19 +432,19 @@ class _ShopViewportState extends State<ShopViewport> {
           overflow: TextOverflow.ellipsis, style: const TextStyle(color: Color(0xffe5d3ed), fontSize: 12))))))),
     Expanded(child: LayoutBuilder(builder: (context, constraints) {
       final compact = constraints.maxWidth < 700;
-      final panelHeight = math.min(constraints.maxHeight * .95, compact ? 540.0 : tab == 0 ? 600.0 : 760.0);
+      final panelHeight = math.min(constraints.maxHeight * .95, tab == 0 && !hasCustomer ? 380.0 : compact ? 540.0 : tab == 0 ? 600.0 : 760.0);
       final panelWidth = compact ? constraints.maxWidth - 16 : tab == 0
-        ? math.min(850.0, constraints.maxWidth - 60)
+        ? math.min(hasCustomer ? math.min(850.0, (panelHeight - 90) * 1.12 + 290) : 660.0, constraints.maxWidth - 60)
         : math.min(800.0, (panelHeight - 120) * 1.3);
       return Stack(children: [
         // The live world stays visible and mounted while any menu is open.
         Positioned(left: 0, right: 0, top: 0, bottom: 0,
           child: widget.world.interaction(visible: talking && !panelOpen, talk: talk, action: choose, label: widget.dialogueAction,
             station: (id) => menu(id == 'book' || id == 'research' ? 1 : 2))),
-        if (panelOpen) Positioned.fill(child: GestureDetector(onTap: close, child: const ColoredBox(color: Color(0x500c0814)))),
+        Positioned.fill(child: IgnorePointer(ignoring: !panelOpen, child: AnimatedOpacity(opacity: panelOpen ? 1 : 0, duration: Duration(milliseconds: MediaQuery.disableAnimationsOf(context) ? 0 : 180), child: GestureDetector(onTap: close, child: const ColoredBox(color: Color(0x700c0814)))))),
         Positioned(key: const ValueKey('shop-panel'), left: (constraints.maxWidth - panelWidth) / 2,
           width: panelWidth, top: (constraints.maxHeight - panelHeight) / 2, height: panelHeight,
-          child: Visibility(visible: panelOpen, maintainState: true,
+          child: GameReveal(visible: panelOpen,
             child: Center(child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 1060),
               child: panelFrame(Column(children: [
                 Padding(padding: const EdgeInsets.fromLTRB(18, 4, 6, 0), child: Row(children: [
@@ -477,7 +477,7 @@ class _ShopViewportState extends State<ShopViewport> {
           ]))))),
       ])))),
   ])))));
-  Widget panelFrame(Widget child) => PropSurface(prop: ShopProp.counter, painted: tab == 0 && !hasCustomer, child: child);
+  Widget panelFrame(Widget child) => SkinPanel(skin: Skin.dialogue, painted: tab == 0 && !hasCustomer, child: child);
   Widget page(int index, Widget child) => SingleChildScrollView(controller: scrolls[index], padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
     child: Center(child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 1200), child: child)));
 }

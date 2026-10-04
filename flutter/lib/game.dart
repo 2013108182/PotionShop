@@ -66,7 +66,9 @@ class Game {
   List<ResearchAttempt> attempts = [];
   String? researchNotebook;
   Set<int> aidDays = {};
-  List<CustomerOrder> get orders => day == 1 ? firstDayOrders : day == 2 ? secondDayOrders : laterOrders;
+  List<CustomerOrder> get orders => day == 1 ? firstDayOrders : day == 2 ? secondDayOrders
+      : !completed ? laterOrders : [laterOrders[0],
+        ('숲길 안내인 엘리', '조합에 보내 주신 물약, 잘 받았어요!\n저도 밤길을 밝힐 시야 물약 한 병을 살게요.', 'sight'), laterOrders[2]];
   bool get night => phase == 'night';
   bool get serviceFinished => customer >= orders.length;
   bool get closed => night || serviceFinished;

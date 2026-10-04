@@ -21,7 +21,7 @@ void main() {
     }
     for (var i = 0; i < 2; i++) {
       await tap(find.byTooltip('손님 대화')); await tap(find.text('물약 고르기'));
-      final sale = find.widgetWithText(OutlinedButton, '깊은 밤의 숙면 물약');
+      final sale = find.widgetWithText(OutlinedButton, '깊은 밤의\n숙면 물약');
       await tester.ensureVisible(sale); await tester.tap(sale); await tester.pump(const Duration(milliseconds: 700)); await tester.pumpAndSettle();
       final give = find.widgetWithText(FilledButton, '물약 건네기');
       await tester.ensureVisible(give); await tester.tap(give); await tester.pump(const Duration(milliseconds: 700)); await tester.pumpAndSettle();
@@ -33,7 +33,7 @@ void main() {
     final night = find.text('밤 연구실로 가기');
     await tester.ensureVisible(night); await tester.tap(night); await tester.pump(const Duration(milliseconds: 700)); await tester.pumpAndSettle();
     expect(find.text('1일째 · 밤 연구와 준비'), findsOneWidget);
-    expect(find.text('연구실 · 어둠 속 시야'), findsOneWidget);
+    expect(find.text('내일의 영업 준비'), findsOneWidget);
     final prefs = await SharedPreferences.getInstance();
     expect(Game.decode(prefs.getString('potionshop.v2')!).night, isTrue);
     expect(prefs.getString('potionshop.v1'), 'old prototype save');

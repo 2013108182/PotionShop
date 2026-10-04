@@ -20,7 +20,7 @@ void main() {
       await tap(find.text('물약 고르기'));
       final give = find.widgetWithText(FilledButton, '물약 건네기');
       expect(tester.widget<FilledButton>(give).onPressed, isNull);
-      await tap(find.widgetWithText(OutlinedButton, '깊은 밤의 숙면 물약'));
+      await tap(find.widgetWithText(OutlinedButton, '깊은 밤의\n숙면 물약'));
       expect(find.text('128 G'), findsOneWidget);
       final world = find.byType(ShopWorld);
       expect(world, findsOneWidget);

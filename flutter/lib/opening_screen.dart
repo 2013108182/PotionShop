@@ -149,11 +149,11 @@ class _OpeningJourneyState extends State<OpeningJourney> {
         bottles: game.stock['sleep']!,
         onReady: (value) { if (mounted) setState(() => customerReady = value); }),
       dialogue: LayoutBuilder(builder: (context, constraints) {
-        final wide = constraints.maxWidth > 750;
+
         final words = Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           Text(hasCustomer ? beat.speaker : beat.title, style: const TextStyle(color: _gold, fontSize: 18)),
           const SizedBox(height: 12),
-          Text(beat.text.replaceAll('\n\n', ' '),
+          GameParagraph(beat.text.replaceAll('\n\n', '\n'),
             style: const TextStyle(color: _cream, fontSize: 15, height: 1.5)),
         ]);
         final action = Tooltip(message: beat.action, child: GameAction(onPressed: busy || waiting ? null : advance,
@@ -170,8 +170,7 @@ class _OpeningJourneyState extends State<OpeningJourney> {
             }
             advance();
           });
-        return wide ? Row(children: [Expanded(child: words), const SizedBox(width: 24), SizedBox(width: 215, child: action)])
-          : Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [words, const SizedBox(height: 12), action]);
+        return Padding(padding: const EdgeInsets.all(12), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [words, const SizedBox(height: 24), Align(alignment: Alignment.centerRight, child: action)]));
       }),
     );
   }

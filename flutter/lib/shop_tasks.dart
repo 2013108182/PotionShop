@@ -43,10 +43,10 @@ class _PotionSelectionState extends State<PotionSelection> {
               style: OutlinedButton.styleFrom(padding: const EdgeInsets.all(3), side: BorderSide.none,
                 backgroundColor: selected == p.id ? const Color(0x507e597b) : Colors.transparent, shape: const RoundedRectangleBorder()),
               onPressed: widget.enabled ? () => setState(() => selected = p.id) : null,
-              child: Column(mainAxisAlignment: MainAxisAlignment.end, children: [Opacity(opacity: count > 0 ? 1 : .35, child: potionArt(p, math.max(20, math.min(76, shelfSize.maxHeight * .35 - 52)))),
+              child: Column(mainAxisAlignment: MainAxisAlignment.end, children: [Opacity(opacity: count > 0 ? 1 : .35, child: potionArt(p, math.max(20, math.min(76, shelfSize.maxHeight * .35 - 68)))),
                 SkinPanel(skin: Skin.parchment, child: Padding(padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
                   child: Text('×$count', style: const TextStyle(color: Color(0xff402d36), fontSize: 12)))),
-                Text(p.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Color(0xffffe7bb), fontSize: 11)),
+                Text(p.name.replaceFirst(' 숙면', '\n숙면').replaceFirst(' 시야', '\n시야'), textAlign: TextAlign.center, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Color(0xffffe7bb), fontSize: 12, height: 1.2)),
               ])));
           }))))))),
       if (pages > 1) SizedBox(height: 36, child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
@@ -56,14 +56,15 @@ class _PotionSelectionState extends State<PotionSelection> {
       ])),
     ]);
     final receipt = Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      if (widget.order != null) SizedBox(height: 105, child: SingleChildScrollView(child: widget.order!)),
+      Expanded(child: SingleChildScrollView(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      if (widget.order != null) widget.order!,
       const SizedBox(height: 8),
       if (choice != null) ...[
         Text(choice.name, style: const TextStyle(color: worldGold, fontSize: 16)),
         const SizedBox(height: 6), Text(choice.description, style: const TextStyle(fontSize: 13)),
         const SizedBox(height: 6), Text('${choice.price} G · 재고 ${widget.game.stock[choice.id] ?? 0}병', style: const TextStyle(color: worldGold)),
       ] else const Text('선반에서 물약을 골라 주세요.', style: TextStyle(color: worldGold)),
-      const Spacer(),
+      ]))), const SizedBox(height: 14),
       GameAction(label: '물약 건네기', onPressed: widget.enabled && choice != null && (widget.game.stock[choice.id] ?? 0) > 0
         ? () { final id = choice.id; setState(() => selected = null); widget.onGive(id); } : null),
     ]);
@@ -176,12 +177,12 @@ class _ShopTasksState extends State<ShopTasks> {
   Widget guildOrder() => spread(Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
     heading('길잡이 조합의 편지'),
     const Center(child: GameIcon(GameGlyph.book, size: 64)),
-    Text(game.day < 3 ? '3일째에 조합의 첫 주문서가 도착합니다.' :
+    GameParagraph(game.day < 3 ? '3일째에 조합의 첫 주문서가 도착합니다.' :
       game.completed ? '보내 주신 물약 덕분에 밤길을 안전하게 안내하고 있어요. 고맙습니다!' :
       '야간 안내를 시작하려 합니다. 시야 물약 3병을 부탁드립니다.'),
   ]), Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
     heading(game.completed ? '납품 완료' : '시야 물약 3병'),
-    Text(game.completed ? '희귀 재료 상인과 거래가 열렸어요. 영업은 계속할 수 있습니다.' :
+    GameParagraph(game.completed ? '희귀 재료 상인과 거래가 열렸어요. 영업은 계속할 수 있습니다.' :
       '준비 ${game.stock['sight']} / 3병\n보상 120 G\n희귀 재료 거래 해금\n마감 없음'),
     const SizedBox(height: 12),
     if (!game.completed) GameAction(compact: true, label: '3병 납품하기',
