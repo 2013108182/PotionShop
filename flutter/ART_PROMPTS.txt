@@ -1,0 +1,10 @@
+Method: built-in image_gen. Reference: approved PotionShop shop concept.
+
+BACKGROUND
+Clean reusable game background of the exact reference room. Preserve purple palette, crisp RPG Maker pixel art, furnishings, central sales counter, left cauldron, arched moonlit window, bookshelves, potion shelves and warm candles. Remove all UI overlays and both human characters, reconstruct floor and room. Keep cat. Landscape 4:3, readable floor in lower half. No text, letters, icons or HUD.
+
+WITCH
+One isolated full-body front-facing chibi witch sprite, genuinely transparent background. Match reference lavender hair, purple hat with brass buckle, purple cloak and dress, brown boots, friendly face. RPG Maker / SNES chunky pixel clusters, compact silhouette, nearest-neighbor appearance. No scenery, counter, lettering or additional characters.
+
+CUSTOMER
+One isolated full-body front-facing chibi villager sprite on genuinely transparent background. Match reference green hood and cape, brown hair, tan crossbody pouch, brown boots, sweet tired face. RPG Maker / SNES chunky square pixel clusters, nearest-neighbor appearance. No scenery, floor, lettering, sheet or additional characters.
