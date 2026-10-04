@@ -1,3 +1,4 @@
+import 'ui_art.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -164,12 +165,12 @@ class _ResearchStudioState extends State<ResearchStudio> {
             onPressed: brewing || session.solved ? null : () { setState(() { session.selectSlot(index); mobilePanel = 1; }); save(); },
             child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
               Text('${index + 1}번째 칸', style: const TextStyle(color: _muted, fontSize: 10)),
-              if (id != null) mark(id, size: compact ? 26 : 50) else Icon(Icons.add, size: compact ? 20 : 32, color: _muted),
+              if (id != null) mark(id, size: compact ? 26 : 50) else GameIcon(GameGlyph.herbs, size: compact ? 20 : 32),
               Text(id != null ? _shortNames[id]! : '선택하기', style: const TextStyle(color: _cream, fontSize: 11)),
             ]))),
           if (id != null && !session.solved) Positioned(top: 0, right: 0, child: SizedBox(width: 26, height: 26, child: IconButton(
             padding: EdgeInsets.zero, iconSize: 13, tooltip: '${index + 1}번째 칸 비우기',
-            onPressed: brewing ? null : () { setState(() => session.clearSlot(index)); save(); }, icon: const Icon(Icons.close, color: _muted)))),
+            onPressed: brewing ? null : () { setState(() => session.clearSlot(index)); save(); }, icon: const GameIcon(GameGlyph.close, size: 20)))),
         ]))));
   }
   Widget bench(bool compact) => frame(Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
@@ -196,7 +197,7 @@ class _ResearchStudioState extends State<ResearchStudio> {
     SizedBox(height: compact ? 38 : 48, child: FilledButton.icon(
       style: FilledButton.styleFrom(backgroundColor: _gold, foregroundColor: _ink, shape: const RoundedRectangleBorder()),
       onPressed: session.ready && !brewing ? experiment : null,
-      icon: Icon(session.solved ? Icons.check : Icons.science_outlined, size: 20),
+      icon: GameIcon(session.solved ? GameGlyph.next : GameGlyph.flask, size: 24),
       label: Text(session.solved ? '레시피 발견 완료' : brewing ? '실험 중…' : '조합 실험하기', style: const TextStyle(fontWeight: FontWeight.bold)))),
     if (session.solved) TextButton(onPressed: () => widget.game != null ? Navigator.pop(context) : Navigator.pushNamed(context, '/shop'),
       child: const Text('상점으로 돌아가기', style: TextStyle(color: _gold))),
@@ -221,7 +222,7 @@ class _ResearchStudioState extends State<ResearchStudio> {
           child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
             Row(children: [Text('$number', style: const TextStyle(fontWeight: FontWeight.bold)), const SizedBox(width: 8),
               for (final id in a.guess) Expanded(child: Column(children: [mark(id, size: compact ? 18 : 23), Text(_shortNames[id]!, style: const TextStyle(fontSize: 10))])),
-              if (!session.solved) const Icon(Icons.north_west, size: 14),
+              if (!session.solved) const GameIcon(GameGlyph.back, size: 18),
             ]), const SizedBox(height: 6),
             Text('${a.strikes} 완벽 · ${a.balls} 불안정${session.solved ? '' : '  · 눌러서 다시 놓기'}', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
           ]));
@@ -243,7 +244,7 @@ class _ResearchStudioState extends State<ResearchStudio> {
       return Container(decoration: const BoxDecoration(gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight,
         colors: [Color(0xff281b38), Color(0xff171020)])), child: Center(child: ConstrainedBox(constraints: BoxConstraints(maxWidth: wide ? 1480 : 760),
         child: Padding(padding: EdgeInsets.all(padding), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          Row(children: [const Icon(Icons.auto_awesome, color: _gold, size: 20), const SizedBox(width: 8),
+          Row(children: [const GameIcon(GameGlyph.flask, size: 24), const SizedBox(width: 8),
             const Expanded(child: Text('달빛 연구실', style: TextStyle(color: _cream, fontSize: 20, fontWeight: FontWeight.bold))),
             if (widget.game == null && session.solved) TextButton(onPressed: newNotebook,
               child: const Text('새 연구', style: TextStyle(color: _gold, fontSize: 12))),

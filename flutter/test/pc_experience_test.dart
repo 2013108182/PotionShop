@@ -5,9 +5,10 @@ import 'package:potionshop/game.dart';
 import 'package:potionshop/shop_tasks.dart';
 import 'package:potionshop/research_screen.dart';
 import 'package:potionshop/research_session.dart';
+import 'package:potionshop/ui_art.dart';
 
 void main() {
-  testWidgets('Twenty potions and give action fit together on PC without scrolling', (tester) async {
+  testWidgets('Twenty potions use shelf pages and keep the give action fixed', (tester) async {
     tester.view.physicalSize = const Size(1280, 720); tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize); addTearDown(tester.view.resetDevicePixelRatio);
     final catalog = List.generate(20, (i) => Potion('qa$i', '시험 물약 $i', '효과 $i', ['moon', 'salt', 'mushroom'], 35));
@@ -17,14 +18,29 @@ void main() {
     await tester.pumpWidget(MaterialApp(home: Scaffold(body: Padding(padding: const EdgeInsets.all(32),
       child: PotionSelection(game: game, enabled: true, catalog: catalog, order: const Text('고정 주문'), onGive: (id) => given = id)))));
     await tester.pumpAndSettle();
-    expect(find.widgetWithText(OutlinedButton, '시험 물약 19').hitTestable(), findsOneWidget);
+    final shelfSize = tester.getSize(find.byWidgetPredicate((w) => w is PropSurface && w.prop == ShopProp.shelf));
+    expect(shelfSize.width / shelfSize.height, closeTo(1.12, .01));
+    expect(find.widgetWithText(OutlinedButton, '시험 물약 19'), findsNothing);
     expect(find.widgetWithText(OutlinedButton, '시험 물약 0').hitTestable(), findsOneWidget);
     final button = find.widgetWithText(FilledButton, '물약 건네기');
     final before = tester.getRect(button);
+    await tester.tap(find.byTooltip('다음 선반')); await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('다음 선반')); await tester.pumpAndSettle();
+    expect(find.widgetWithText(OutlinedButton, '시험 물약 19').hitTestable(), findsOneWidget);
     await tester.tap(find.widgetWithText(OutlinedButton, '시험 물약 19')); await tester.pumpAndSettle();
     expect(given, isNull); expect(tester.getRect(button), before);
     expect(button.hitTestable(), findsOneWidget);
     await tester.tap(button); expect(given, 'qa19'); expect(tester.takeException(), isNull);
+  });
+  testWidgets('Recipe book keeps its aspect ratio on a desktop viewport', (tester) async {
+    tester.view.physicalSize = const Size(1280, 1000); tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize); addTearDown(tester.view.resetDevicePixelRatio);
+    await tester.pumpWidget(MaterialApp(home: Scaffold(body: Center(child: SizedBox(width: 760,
+      child: ShopTasks(game: Game(), management: false, canResearch: false, onResearch: () {}, onChanged: (_) {}))))));
+    await tester.pumpAndSettle();
+    final bookSize = tester.getSize(find.byWidgetPredicate((w) => w is PropSurface && w.prop == ShopProp.book));
+    expect(bookSize.width / bookSize.height, closeTo(1.3, .01));
+    expect(tester.takeException(), isNull);
   });
   testWidgets('Research withholds result and reward until staged reveal finishes', (tester) async {
     tester.view.physicalSize = const Size(1280, 720); tester.view.devicePixelRatio = 1;

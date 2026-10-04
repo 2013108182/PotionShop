@@ -15,6 +15,9 @@ void main() {
       SharedPreferences.setMockInitialValues({});
       await tester.pumpWidget(const PotionShop(researchFirst: false)); await tester.pumpAndSettle();
       Future<void> tap(Finder finder) async { await tester.ensureVisible(finder); await tester.tap(finder); await tester.pump(const Duration(milliseconds: 700)); await tester.pumpAndSettle(); }
+      expect(find.text('물약 건네기'), findsNothing);
+      await tap(find.byTooltip('손님 대화'));
+      await tap(find.text('물약 고르기'));
       final give = find.widgetWithText(FilledButton, '물약 건네기');
       expect(tester.widget<FilledButton>(give).onPressed, isNull);
       await tap(find.widgetWithText(OutlinedButton, '깊은 밤의 숙면 물약'));
@@ -24,14 +27,16 @@ void main() {
       expect(tester.getSize(world).height, greaterThan(150));
       final mapHeight = tester.getSize(world).height;
       await tap(find.byTooltip('패널 닫기'));
-      expect(tester.getSize(world).height, greaterThan(mapHeight));
+      expect(tester.getSize(world).height, equals(mapHeight));
       await tap(find.widgetWithText(TextButton, '손님 응대'));
+      await tap(find.text('물약 고르기'));
       expect(tester.widget<FilledButton>(give).onPressed, isNotNull);
       await tap(find.widgetWithText(TextButton, '작업대'));
       expect(find.text('레시피로 제조'), findsOneWidget);
       await tap(find.widgetWithText(TextButton, '상점 관리'));
       expect(find.text('재료 구매'), findsOneWidget);
       await tap(find.widgetWithText(TextButton, '손님 응대'));
+      await tap(find.text('물약 고르기'));
       expect(tester.widget<FilledButton>(give).onPressed, isNotNull);
       await tap(give);
       final saved = Game.decode((await SharedPreferences.getInstance()).getString('potionshop.v2')!);

@@ -1,3 +1,4 @@
+import 'ui_art.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -37,7 +38,9 @@ class _ShopScreenState extends State<ShopScreen> {
   SharedPreferences? prefs;
   bool ready = false, customerReady = false;
   String? arrivedId;
-  String status = '첫 영업이에요. 숙면 물약을 건네며 마을 사람들을 만나 보세요.';
+  String? responseId, responseName, responseText;
+  Timer? statusTimer;
+  String status = '';
   Future<void> saveQueue = Future<void>.value();
   @override
   void initState() { super.initState(); unawaited(load()); }
@@ -45,7 +48,7 @@ class _ShopScreenState extends State<ShopScreen> {
     try {
       prefs = await SharedPreferences.getInstance();
       final saved = prefs!.getString(widget.saveKey);
-      if (saved != null) { game = Game.decode(saved); status = '지난번에 머물던 시간부터 다시 시작해요.'; }
+      if (saved != null) { game = Game.decode(saved); }
       else if (prefs!.containsKey('potionshop.v1')) { status = '새 이야기는 1일째부터 시작해요. 이전 상점 저장은 별도로 보관되어 있어요.'; }
       final studioSave = prefs!.getString('potionshop.research.v1');
       if (widget.saveKey == 'potionshop.v2' && studioSave != null && !game.knows('sight')) {
@@ -63,8 +66,12 @@ class _ShopScreenState extends State<ShopScreen> {
     } catch (_) { status = '기록을 불러오지 못했어요. 새 상점으로 시작합니다.'; }
     if (mounted) setState(() => ready = true);
   }
+  @override
+  void dispose() { statusTimer?.cancel(); super.dispose(); }
   void change(String message) {
+    statusTimer?.cancel();
     setState(() => status = message);
+    statusTimer = Timer(const Duration(seconds: 4), () { if (mounted) setState(() => status = ''); });
     final encoded = game.encode();
     saveQueue = saveQueue.then((_) async {
       try {
@@ -93,7 +100,7 @@ class _ShopScreenState extends State<ShopScreen> {
   }
   Widget dialogTitle(String title, BuildContext dialogContext) => Row(children: [
     Expanded(child: Text(title, style: const TextStyle(fontSize: 22, color: brass, fontWeight: FontWeight.bold))),
-    IconButton(onPressed: () => Navigator.pop(dialogContext), icon: const Icon(Icons.close), tooltip: '닫기'),
+    IconButton(onPressed: () => Navigator.pop(dialogContext), icon: const GameIcon(GameGlyph.close), tooltip: '닫기'),
   ]);
   Future<void> openMaterials() async {
     await showDialog<void>(context: context, builder: (dialogContext) => StatefulBuilder(builder: (context, refresh) => Dialog(
@@ -113,7 +120,7 @@ class _ShopScreenState extends State<ShopScreen> {
   Future<void> openUpgrades() async {
     await showDialog<void>(context: context, builder: (dialogContext) => StatefulBuilder(builder: (context, refresh) => Dialog(
       backgroundColor: ink, child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 420), child: SingleChildScrollView(padding: const EdgeInsets.all(20), child: Column(mainAxisSize: MainAxisSize.min, children: [
-        dialogTitle('가마솥 공방', dialogContext), const Icon(Icons.auto_awesome, size: 50, color: lavender), gap,
+        dialogTitle('가마솥 공방', dialogContext), const GameIcon(GameGlyph.flask, size: 50), gap,
         Text('가마솥 Lv.${game.level}', style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)), gap,
         Text(game.level >= 3 ? '최고 단계에 도달했어요!' : '한 번에 ${game.level + 1}병을 생산해요.\n재료도 병 수만큼 필요해요.', textAlign: TextAlign.center), gap,
         PixelButton(label: game.level >= 3 ? '개선 완료' : '설비 개선 · ${game.upgradeCost} G', icon: Icons.build_outlined,
@@ -140,8 +147,8 @@ class _ShopScreenState extends State<ShopScreen> {
       PixelButton(label: '새 이야기 시작', icon: Icons.replay, onPressed: restart),
     ],
   ]));
-  String? get visitorId => !game.completed && !game.night && !game.serviceFinished
-      ? '${game.day}-${game.customer}' : null;
+  String? get visitorId => responseId ?? (!game.completed && !game.night && !game.serviceFinished
+      ? '${game.day}-${game.customer}' : null);
   bool get canServe => customerReady && arrivedId == visitorId;
   Future<void> research() async {
     if (!game.night) { change('연구는 영업을 마친 뒤에 할 수 있어요.'); return; }
@@ -166,14 +173,21 @@ class _ShopScreenState extends State<ShopScreen> {
     ] else if (visitorId != null) ...[
       PotionSelection(key: ValueKey(visitorId), game: game, enabled: canServe,
         order: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          const Text('손님의 부탁에 맞는 약을 골라 주세요.', style: TextStyle(color: brass, fontSize: 17)),
-          const SizedBox(height: 12), const Text('손님 위의 … 말풍선에서 주문을 확인할 수 있어요.'),
+          Text(game.orders[game.customer].$1, style: TextStyle(color: brass, fontSize: 17)),
+          const SizedBox(height: 12), Text(game.orders[game.customer].$2),
       TextButton(onPressed: canServe ? () {
         final wanted = game.orders[game.customer].$3;
         if (game.skipCustomer()) change(wanted == 'sight' ? '엘리의 부탁을 기록했어요. 밤에 연구하고 다시 만나 보세요.' : '손님이 다음 기회에 오기로 했어요.');
       } : null, child: Text(game.knows(game.orders[game.customer].$3) ? '오늘은 주문을 받지 않기' : '아직 없어요 · 요청 기록하기')),
         ]), onGive: (id) {
-          final error = game.sell(id); change(error ?? '물약을 건넸어요. 손님이 고맙게 받아 갑니다.');
+          final previousId = visitorId, name = game.orders[game.customer].$1;
+          final before = game.gold;
+          final error = game.sell(id);
+          if (error == null) {
+            responseId = previousId; responseName = name;
+            responseText = '고마워요! 잘 쓸게요. 다음에 또 들를게요.';
+          }
+          change(error ?? '+${game.gold - before} G · 판매 완료');
         }),
     ] else ...[
       Text(game.night ? '연구실 · 어둠 속 시야' : '영업 마감', style: const TextStyle(color: brass, fontSize: 16)),
@@ -196,17 +210,19 @@ class _ShopScreenState extends State<ShopScreen> {
   @override
   Widget build(BuildContext context) {
     if (!ready) return const Scaffold(body: Center(child: CircularProgressIndicator()));
-    return ShopViewport(systemMessage: '${game.objective} · $status',
+    return ShopViewport(systemMessage: status,
+      dialogueAction: responseId == null ? '물약 고르기' : '대화 마치기',
+      onDialogueAction: responseId == null ? null : () => setState(() { responseId = null; responseName = null; responseText = null; customerReady = false; }),
       waiting: visitorId != null && !canServe,
       workbench: ShopTasks(game: game, management: false, canResearch: game.night && game.researchRequested && !game.knows('sight'), onResearch: research, onChanged: change),
       management: ShopTasks(game: game, management: true, canResearch: false, onResearch: research, onChanged: change),
-      speakerName: visitorId == null ? null : game.orders[game.customer].$1,
+      speakerName: visitorId == null ? null : responseName ?? game.orders[game.customer].$1,
       dayLabel: '${game.day}일째 · ${game.completed ? '첫 이야기 완료' : game.night ? '밤 연구와 준비' : '낮 영업'}',
       goldLabel: '${game.gold} G', stockLabel: '숙면 ${game.stock['sleep']} · 시야 ${game.stock['sight']}',
-      world: ShopWorld(customerId: visitorId, customerName: visitorId == null ? '' : game.orders[game.customer].$1,
-        speech: visitorId == null ? null : game.orders[game.customer].$2, night: game.night, level: game.level, bottles: game.stock['sleep']! + game.stock['sight']!, onStation: station,
+      world: ShopWorld(customerId: visitorId, customerName: visitorId == null ? '' : responseName ?? game.orders[game.customer].$1,
+        speech: visitorId == null ? null : responseText ?? game.orders[game.customer].$2, night: game.night, level: game.level, bottles: game.stock['sleep']! + game.stock['sight']!, onStation: station,
         onReady: (value) { if (mounted) setState(() { customerReady = value; arrivedId = value ? visitorId : null; }); }),
-      dialogue: controls(),
+      dialogue: responseId == null ? controls() : const SizedBox.shrink(),
       actions: [
         if (game.day >= 3 && !game.completed) TextButton(onPressed: () => showDialog<void>(context: context,
           builder: (ctx) => Dialog(child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 440),
@@ -248,7 +264,7 @@ class PixelButton extends StatelessWidget {
     onPressed: onPressed,
     style: OutlinedButton.styleFrom(backgroundColor: Colors.transparent, foregroundColor: parchment, disabledForegroundColor: const Color(0xff8c7a9a), minimumSize: const Size(0, 52), padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16), shape: const RoundedRectangleBorder(), side: BorderSide.none),
     child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-      if (leading != null) ...[leading!, const SizedBox(width: 10)] else if (icon != null) ...[Icon(icon, size: 22), const SizedBox(width: 8)],
+      if (leading != null) ...[leading!, const SizedBox(width: 10)] else if (icon != null) ...[GameIcon({Icons.science_outlined: GameGlyph.flask, Icons.science: GameGlyph.flask, Icons.shopping_bag_outlined: GameGlyph.herbs, Icons.build_outlined: GameGlyph.hammer, Icons.local_shipping_outlined: GameGlyph.crate, Icons.storefront: GameGlyph.shop, Icons.replay: GameGlyph.restart, Icons.nightlight_round: GameGlyph.moon, Icons.wb_sunny_outlined: GameGlyph.sun}[icon] ?? GameGlyph.next, size: 26), const SizedBox(width: 8)],
       Flexible(child: Text(label, textAlign: TextAlign.center, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, height: 1.5))),
     ]),
   ));

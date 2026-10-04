@@ -131,7 +131,9 @@ class _OpeningJourneyState extends State<OpeningJourney> {
     if (stage == 13) return widget.onFinished();
     final beat = _beats[stage];
     final waiting = {1, 3, 5, 11}.contains(stage) && !customerReady;
-    return ShopViewport(systemMessage: error ?? beat.hint,
+    return ShopViewport(systemMessage: error ?? (hasCustomer ? '' : beat.hint),
+      dialogueAction: {1, 3, 11}.contains(stage) ? '물약 고르기' : beat.action,
+      onDialogueAction: {1, 3, 11}.contains(stage) ? null : () { if (!busy) advance(); },
       waiting: waiting,
       workbench: ShopTasks(game: game, management: false, canResearch: stage == 8 || stage == 9, onResearch: openResearch,
         onChanged: (message) { setState(() => error = message); unawaited(save()); }),
@@ -149,9 +151,9 @@ class _OpeningJourneyState extends State<OpeningJourney> {
       dialogue: LayoutBuilder(builder: (context, constraints) {
         final wide = constraints.maxWidth > 750;
         final words = Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          Text(hasCustomer ? '손님에게 물약 권하기' : beat.title, style: const TextStyle(color: _gold, fontSize: 18)),
+          Text(hasCustomer ? beat.speaker : beat.title, style: const TextStyle(color: _gold, fontSize: 18)),
           const SizedBox(height: 12),
-          Text(hasCustomer ? '손님 위의 … 를 눌러 이야기를 들어보세요.' : beat.text.replaceAll('\n\n', ' '),
+          Text(beat.text.replaceAll('\n\n', ' '),
             style: const TextStyle(color: _cream, fontSize: 15, height: 1.5)),
         ]);
         final action = Tooltip(message: beat.action, child: GameAction(onPressed: busy || waiting ? null : advance,
