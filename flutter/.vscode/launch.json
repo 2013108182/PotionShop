@@ -1,0 +1,34 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "물약 상점 · Chrome",
+      "type": "dart",
+      "request": "launch",
+      "program": "${workspaceFolder}/lib/main.dart",
+      "cwd": "${workspaceFolder}",
+      "deviceId": "chrome",
+      "toolArgs": [
+        "--web-port",
+        "8787",
+        "--web-hostname",
+        "127.0.0.1"
+      ]
+    },
+    {
+      "name": "물약 상점 · 웹 배포 빌드 검증",
+      "type": "dart",
+      "request": "launch",
+      "program": "${workspaceFolder}/lib/main.dart",
+      "cwd": "${workspaceFolder}",
+      "deviceId": "chrome",
+      "flutterMode": "release",
+      "toolArgs": [
+        "--web-port",
+        "8787",
+        "--web-hostname",
+        "127.0.0.1"
+      ]
+    }
+  ]
+}
