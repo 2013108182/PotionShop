@@ -15,7 +15,7 @@ void main() {
     await tester.pumpWidget(const PotionShop(researchFirst: false)); await tester.pump(const Duration(milliseconds: 700)); await tester.pumpAndSettle();
     expect(find.text('1일째 · 낮 영업'), findsOneWidget);
     expect(find.text('128 G'), findsOneWidget);
-    expect(find.textContaining('이전 상점 저장'), findsOneWidget);
+    expect(find.textContaining('이전 상점 저장'), findsNothing);
     Future<void> tap(Finder finder) async {
       await tester.ensureVisible(finder); await tester.tap(finder); await tester.pump(const Duration(milliseconds: 700)); await tester.pumpAndSettle();
     }

@@ -18,10 +18,16 @@ class _GameRevealState extends State<GameReveal> with SingleTickerProviderStateM
   late final AnimationController motion = AnimationController(vsync: this,
     duration: const Duration(milliseconds: 220), reverseDuration: const Duration(milliseconds: 150));
   bool reduced = false;
+  Widget? exitingChild;
   @override
   void didChangeDependencies() { super.didChangeDependencies(); reduced = MediaQuery.disableAnimationsOf(context); update(); }
   @override
-  void didUpdateWidget(GameReveal old) { super.didUpdateWidget(old); if (old.visible != widget.visible) update(); }
+  void didUpdateWidget(GameReveal old) {
+    super.didUpdateWidget(old);
+    if (old.visible && !widget.visible) exitingChild = old.child;
+    if (widget.visible) exitingChild = null;
+    if (old.visible != widget.visible) update();
+  }
   void update() {
     if (reduced) { motion.value = widget.visible ? 1 : 0; }
     else if (widget.visible) { motion.forward(); } else { motion.reverse(); }
@@ -29,7 +35,7 @@ class _GameRevealState extends State<GameReveal> with SingleTickerProviderStateM
   @override
   void dispose() { motion.dispose(); super.dispose(); }
   @override
-  Widget build(BuildContext context) => AnimatedBuilder(animation: motion, child: widget.child, builder: (context, child) {
+  Widget build(BuildContext context) => AnimatedBuilder(animation: motion, child: !widget.visible ? exitingChild ?? widget.child : widget.child, builder: (context, child) {
     final value = Curves.easeOutCubic.transform(motion.value);
     return Offstage(offstage: !widget.visible && motion.isDismissed, child: IgnorePointer(ignoring: !widget.visible,
       child: ExcludeSemantics(excluding: !widget.visible, child: Opacity(opacity: value,

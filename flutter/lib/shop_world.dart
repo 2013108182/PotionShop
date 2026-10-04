@@ -383,6 +383,7 @@ class ShopViewport extends StatefulWidget {
 class _ShopViewportState extends State<ShopViewport> {
   int tab = 0;
   bool panelOpen = false, talking = false;
+  Size? visiblePanelSize;
   bool get hasCustomer => widget.world.customerId != null;
   @override
   void initState() { super.initState(); panelOpen = !hasCustomer; }
@@ -426,16 +427,15 @@ class _ShopViewportState extends State<ShopViewport> {
         icon: GameIcon(panelOpen || talking ? GameGlyph.close : GameGlyph.talk),
         onPressed: panelOpen || talking ? close : () => menu(0))),
     ])),
-    SizedBox(height: 42, child: widget.systemMessage.isEmpty ? null : Align(alignment: Alignment.center, child:
-      SkinPanel(skin: Skin.dialogue, child: Padding(padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-        child: Semantics(liveRegion: true, child: Text(widget.systemMessage, maxLines: 1,
-          overflow: TextOverflow.ellipsis, style: const TextStyle(color: Color(0xffe5d3ed), fontSize: 12))))))),
     Expanded(child: LayoutBuilder(builder: (context, constraints) {
       final compact = constraints.maxWidth < 700;
-      final panelHeight = math.min(constraints.maxHeight * .95, tab == 0 && !hasCustomer ? 380.0 : compact ? 540.0 : tab == 0 ? 600.0 : 760.0);
-      final panelWidth = compact ? constraints.maxWidth - 16 : tab == 0
-        ? math.min(hasCustomer ? math.min(850.0, (panelHeight - 90) * 1.12 + 290) : 660.0, constraints.maxWidth - 60)
-        : math.min(800.0, (panelHeight - 120) * 1.3);
+      final proposedHeight = math.min(constraints.maxHeight * .95, tab == 0 && !hasCustomer ? 380.0 : compact ? 540.0 : tab == 0 ? 600.0 : 760.0);
+      final proposedWidth = compact ? constraints.maxWidth - 16 : tab == 0
+        ? math.min(hasCustomer ? math.min(850.0, (proposedHeight - 90) * 1.12 + 290) : 660.0, constraints.maxWidth - 60)
+        : math.min(800.0, (proposedHeight - 120) * 1.3);
+      if (panelOpen || visiblePanelSize == null) visiblePanelSize = Size(proposedWidth, proposedHeight);
+      final panelWidth = visiblePanelSize!.width;
+      final panelHeight = visiblePanelSize!.height;
       return Stack(children: [
         // The live world stays visible and mounted while any menu is open.
         Positioned(left: 0, right: 0, top: 0, bottom: 0,
