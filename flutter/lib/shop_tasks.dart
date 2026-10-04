@@ -99,11 +99,11 @@ class ShopTasks extends StatefulWidget {
   State<ShopTasks> createState() => _ShopTasksState();
 }
 class _ShopTasksState extends State<ShopTasks> {
-  int section = 0, recipe = 0, material = 0;
+  int section = 0, recipe = 0, material = 0, quantity = 1;
   Game get game => widget.game;
   bool get compactBook => MediaQuery.sizeOf(context).height < 850;
   static const ink = Color(0xff3c2938);
-  Widget heading(String text) => Padding(padding: const EdgeInsets.only(bottom: 14),
+  Widget heading(String text) => Padding(padding: EdgeInsets.only(bottom: compactBook ? 8 : 14),
     child: Text(text, style: TextStyle(color: ink, fontSize: compactBook ? 16 : 20, fontWeight: FontWeight.bold)));
   Widget spread(Widget left, Widget right) => LayoutBuilder(builder: (context, box) {
     if (box.maxWidth < 400) return Column(children: [paper(left), const SizedBox(height: 14), paper(right)]);
@@ -121,17 +121,29 @@ class _ShopTasksState extends State<ShopTasks> {
       for (var i = 0; i < known.length; i++) TextButton(onPressed: () => setState(() => recipe = i),
         style: TextButton.styleFrom(foregroundColor: ink, backgroundColor: recipe == i ? const Color(0x22774f54) : Colors.transparent),
         child: Row(children: [potionArt(known[i], 54), const SizedBox(width: 10), Expanded(child: Text(known[i].name))])),
-      const SizedBox(height: 12), const Text('기록해 둔 레시피를 골라 제조합니다.'),
+      const SizedBox(height: 12), const Text('물약과 수량 선택\n부족한 재료는 함께\n구매합니다.'),
     ]), Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      heading(p.name), if (!compactBook) Text(p.description), const SizedBox(height: 10),
+      heading(p.name),
+      Text('재고 ${game.stock[p.id]}병 · 판매가 ${p.price} G', style: const TextStyle(fontSize: 12)),
+      Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+        IconButton(tooltip: '제조 수량 줄이기', constraints: const BoxConstraints(minWidth: 36, minHeight: 36), padding: const EdgeInsets.all(4), onPressed: quantity > 1 ? () => setState(() => quantity--) : null,
+          icon: const GameIcon(GameGlyph.back, size: 22)),
+        Text('${quantity * game.level}병', style: const TextStyle(fontSize: 20)),
+        IconButton(tooltip: '제조 수량 늘리기', constraints: const BoxConstraints(minWidth: 36, minHeight: 36), padding: const EdgeInsets.all(4), onPressed: quantity < 10 ? () => setState(() => quantity++) : null,
+          icon: const GameIcon(GameGlyph.next, size: 22)),
+      ]),
+      Text('재료 원가 ${quantity * 6} G', style: const TextStyle(fontSize: 12)),
       Row(mainAxisAlignment: MainAxisAlignment.spaceEvenly, children: [for (final id in p.recipe)
-        Expanded(child: Column(children: [Tooltip(message: ingredientName(id), child: IngredientSprite(id: id, size: compactBook ? 32 : 45)),
-          if (!compactBook) Text(ingredientName(id), style: const TextStyle(fontSize: 11)),
-          Text('${game.materials[id]} / ${game.level}', style: TextStyle(color: game.materials[id]! < game.level ? Colors.red.shade900 : ink))]))]),
-      const SizedBox(height: 12), Text('완성품 ${game.stock[p.id]}병 · ${game.level}병씩 제조', style: const TextStyle(fontSize: 12)), const SizedBox(height: 12),
-      GameAction(compact: compactBook, label: '${game.level}병 만들기', onPressed: game.canBrew(p) ? () {
-        final error = game.brew(p.id); widget.onChanged(error ?? '${p.name} ${game.level}병을 만들었어요.');
+        Tooltip(message: '${ingredientName(id)} · 보유 ${game.materials[id]} / 필요 ${quantity}',
+          child: IngredientSprite(id: id, size: compactBook ? 24 : 40))]),
+      Text('부족분 구매 ${game.prepareCost(p, quantity * game.level)} G', style: const TextStyle(fontSize: 12)),
+      const SizedBox(height: 8),
+      GameAction(compact: true, label: '구매·제조하기', onPressed: game.gold >= game.prepareCost(p, quantity * game.level) ? () {
+        final count = quantity * game.level;
+        final error = game.prepare(p.id, quantity * game.level);
+        widget.onChanged(error ?? '${p.name} $count병을 준비했어요.');
       } : null),
+      if (game.gold < game.prepareCost(p, quantity * game.level)) const Text('구매 비용이 부족해요.', style: TextStyle(fontSize: 12)),
     ]));
   }
   Widget supplies() {
@@ -154,13 +166,31 @@ class _ShopTasksState extends State<ShopTasks> {
   Widget equipment() => spread(Column(children: [heading('가마솥 공방'),
     const SizedBox(height: 180, child: ResearchCauldron(brewing: false, solved: false))]),
     Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [heading('가마솥 Lv.${game.level}'),
-      Text(game.level >= 3 ? '최고 단계의 가마솥입니다.' : '다음 단계에서는 한 번에 ${game.level + 1}병을 제조합니다.'),
-      const SizedBox(height: 14), Text('재료도 병 수만큼 사용합니다.\n현재 보유 ${game.gold} G'), const SizedBox(height: 24),
+      Text(game.level >= 3 ? '최고 단계의 가마솥입니다.' : '같은 재료 1세트로 ${game.level}병 → ${game.level + 1}병을 만듭니다.'),
+      const SizedBox(height: 14), Text('1세트 원가 6 G · 현재 병당 ${(6 / game.level).toStringAsFixed(1)} G\n현재 보유 ${game.gold} G'), const SizedBox(height: 24),
       GameAction(compact: compactBook, label: game.level >= 3 ? '개선 완료' : '설비 개선 · ${game.upgradeCost} G',
-        onPressed: game.level < 3 && game.gold >= game.upgradeCost && !game.completed ? () {
+        onPressed: game.level < 3 && game.gold >= game.upgradeCost ? () {
           if (game.upgrade()) widget.onChanged('가마솥을 Lv.${game.level}로 개선했어요.');
         } : null),
     ]));
+  Widget guildOrder() => spread(Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+    heading('길잡이 조합의 편지'),
+    const Center(child: GameIcon(GameGlyph.book, size: 64)),
+    Text(game.day < 3 ? '3일째에 조합의 첫 주문서가 도착합니다.' :
+      game.completed ? '보내 주신 물약 덕분에 밤길을 안전하게 안내하고 있어요. 고맙습니다!' :
+      '야간 안내를 시작하려 합니다. 시야 물약 3병을 부탁드립니다.'),
+  ]), Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+    heading(game.completed ? '납품 완료' : '시야 물약 3병'),
+    Text(game.completed ? '희귀 재료 상인과 거래가 열렸어요. 영업은 계속할 수 있습니다.' :
+      '준비 ${game.stock['sight']} / 3병\n보상 120 G\n희귀 재료 거래 해금\n마감 없음'),
+    const SizedBox(height: 12),
+    if (!game.completed) GameAction(compact: true, label: '3병 납품하기',
+      onPressed: game.day >= 3 && game.knows('sight') && game.stock['sight']! >= 3 ? () {
+        if (game.deliver()) widget.onChanged('조합 납품 완료 · +120 G · 희귀 재료 거래 해금');
+      } : null),
+    if (!game.completed) const Text('납품할 물약은 영업 준비에서 제조하세요.', style: TextStyle(fontSize: 12)),
+    if (game.completed) GameAction(compact: true, label: '재료 상인', onPressed: () => setState(() => section = 3)),
+  ]));
   Widget research() => spread(Column(children: [heading('달빛 연구'),
     const SizedBox(height: 180, child: ResearchCauldron(brewing: false, solved: false))]),
     Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [heading('새로운 레시피'),
@@ -170,17 +200,18 @@ class _ShopTasksState extends State<ShopTasks> {
     ]));
   @override
   Widget build(BuildContext context) {
-    final labels = widget.management ? ['재료 주문서', '설비', '영업 장부'] : ['제조 장부', '새 물약 연구'];
+    final labels = widget.management ? ['협회 주문', '설비', '영업 장부'] : ['영업 준비', '새 물약 연구'];
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       Row(children: [for (var i = 0; i < labels.length; i++) Expanded(child: Padding(padding: const EdgeInsets.symmetric(horizontal: 4),
         child: SkinPanel(skin: section == i ? Skin.selected : Skin.button, child: TextButton(onPressed: () => setState(() => section = i),
           style: TextButton.styleFrom(foregroundColor: const Color(0xffffe7bb), minimumSize: const Size(0, 42)), child: Text(labels[i])))))]),
       const SizedBox(height: 12),
       if (!widget.management) (section == 0 ? recipeBook() : research())
-      else if (section == 0) supplies()
+      else if (section == 0) guildOrder()
       else if (section == 1) equipment()
+      else if (section == 3) supplies()
       else paper(Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [heading('${game.day}일째 영업 장부'),
-        Text('판매 ${game.served}건\n매출 ${game.revenue} G\n재료 지출 ${game.spending} G\n설비 투자 ${game.investment} G', style: const TextStyle(height: 2.3)),
+        Text('판매 ${game.served}건 · 놓친 주문 ${game.lostSales}건\n매출 ${game.revenue} G\n재료 지출 ${game.spending} G\n설비 투자 ${game.investment} G', style: const TextStyle(height: 2.3)),
         const Divider(color: Color(0xff9b7a65)), Text('보유 금액 ${game.gold} G'),
       ])),
     ]);

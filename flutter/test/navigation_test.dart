@@ -34,7 +34,7 @@ void main() {
       await tap(find.widgetWithText(TextButton, '작업대'));
       expect(find.text('레시피로 제조'), findsOneWidget);
       await tap(find.widgetWithText(TextButton, '상점 관리'));
-      expect(find.text('재료 구매'), findsOneWidget);
+      expect(find.text('길잡이 조합의 편지'), findsOneWidget);
       await tap(find.widgetWithText(TextButton, '손님 응대'));
       await tap(find.text('물약 고르기'));
       expect(tester.widget<FilledButton>(give).onPressed, isNotNull);

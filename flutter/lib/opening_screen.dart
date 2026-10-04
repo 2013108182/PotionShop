@@ -67,7 +67,7 @@ class _OpeningJourneyState extends State<OpeningJourney> {
   bool loaded = false, busy = false, customerReady = false;
   SharedPreferences? prefs;
   Future<void> saveQueue = Future.value();
-  String? error;
+  String? error, customerReply;
   @override
   void initState() { super.initState(); unawaited(load()); }
   Future<void> load() async {
@@ -78,14 +78,14 @@ class _OpeningJourneyState extends State<OpeningJourney> {
         final data = jsonDecode(saved) as Map<String, dynamic>;
         final step = data['stage'];
         if (step is! int || step < 0 || step > 13) throw const FormatException('Invalid opening');
-        game = Game.decode(data['game'] as String); stage = step;
+        game = Game.decode(data['game'] as String); stage = step; customerReply = data['customerReply'] as String?;
       }
       if (stage == 9 && game.knows('sight')) stage = 10;
     } catch (_) { game = Game(); stage = 0; error = '도입부 기록을 불러오지 못했어요. 첫 영업부터 시작합니다.'; }
     if (mounted) setState(() => loaded = true);
   }
   Future<void> save() {
-    final snapshot = jsonEncode({'stage': stage, 'game': game.encode()});
+    final snapshot = jsonEncode({'stage': stage, 'game': game.encode(), 'customerReply': customerReply});
     saveQueue = saveQueue.then((_) async {
       try {
         if (await prefs?.setString(openingSaveKey, snapshot) != true && mounted) {
@@ -120,7 +120,7 @@ class _OpeningJourneyState extends State<OpeningJourney> {
       if (stored != true) { if (mounted) setState(() { error = '영업 기록을 저장하지 못했어요. 다시 시도해 주세요.'; busy = false; }); return; }
     }
     if (!mounted) return;
-    setState(() { stage++; error = null; customerReady = false; }); await save();
+    setState(() { stage++; error = null; customerReply = null; customerReady = false; }); await save();
     await Future<void>.delayed(const Duration(milliseconds: 220));
     if (mounted) setState(() => busy = false);
   }
@@ -144,7 +144,7 @@ class _OpeningJourneyState extends State<OpeningJourney> {
       goldLabel: '${game.gold} G',
       stockLabel: stage >= 10 ? '시야 물약 ${game.stock['sight']}병' : '숙면 물약 ${game.stock['sleep']}병',
       world: ShopWorld(customerId: hasCustomer ? 'opening-${{2: 1, 4: 3, 6: 5, 12: 11}[stage] ?? stage}' : null,
-        speech: hasCustomer ? beat.text.replaceAll('\n\n', ' ') : null,
+        speech: hasCustomer ? customerReply ?? beat.text.replaceAll('\n\n', ' ') : null,
         customerName: hasCustomer ? beat.speaker : '', night: game.night,
         bottles: game.stock['sleep']!,
         onReady: (value) { if (mounted) setState(() => customerReady = value); }),
@@ -159,7 +159,15 @@ class _OpeningJourneyState extends State<OpeningJourney> {
         final action = Tooltip(message: beat.action, child: GameAction(onPressed: busy || waiting ? null : advance,
           label: waiting ? '손님이 오는 중…' : beat.action.contains('한 병 건네기') ? '물약 건네기' : beat.action));
         if ({1, 3, 11}.contains(stage)) return PotionSelection(order: words, key: ValueKey(stage), game: game, enabled: !busy && !waiting, onGive: (id) {
-            if (id != (stage == 11 ? 'sight' : 'sleep')) { setState(() => error = '이 약은 손님의 부탁과 달라요. 효능을 다시 확인해 보세요.'); return; }
+            if (id != (stage == 11 ? 'sight' : 'sleep')) {
+              final previous = game.customer;
+              final reply = game.sell(id);
+              setState(() {
+                customerReply = reply;
+                if (game.customer != previous) { stage++; error = '손님이 구매하지 않고 떠났어요 · 놓친 주문 +1'; }
+              });
+              unawaited(save()); return;
+            }
             advance();
           });
         return wide ? Row(children: [Expanded(child: words), const SizedBox(width: 24), SizedBox(width: 215, child: action)])

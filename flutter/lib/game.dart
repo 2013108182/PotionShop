@@ -37,12 +37,12 @@ const firstDayOrders = <CustomerOrder>[
 const secondDayOrders = <CustomerOrder>[
   ('숲길 안내인 엘리', '어제 부탁드린 밤눈 물약, 찾으셨나요?\n덕분에 길을 잃는 사람이 줄어들 거예요.', 'sight'),
   ('약초 상인 로빈', '지난번 물약 덕분에 잘 잤어요!\n오늘도 숙면 물약 한 병 부탁해요.', 'sleep'),
-  ('견습 우편배달부 준', '저도 밤 배달을 시작해요.\n엘리가 이 가게를 소개해 줬어요.', 'sight'),
+  ('견습 우편배달부 준', '밤 배달을 시작했는데 길이 너무 어두워요.\n어둠 속을 볼 수 있는 약 한 병 주세요.', 'sight'),
 ];
 const laterOrders = <CustomerOrder>[
   ('제빵사 미나', '요즘 손님이 많아 바빠요.\n숙면 물약을 한 병 더 주세요.', 'sleep'),
-  ('숲길 안내인 엘리', '우리 길잡이 조합의 주문서가 도착했어요.\n제 물약은 따로 한 병 살게요!', 'sight'),
-  ('약초 상인 로빈', '상점이 제법 북적이네요.\n오늘도 잘 부탁해요.', 'sleep'),
+  ('숲길 안내인 엘리', '길잡이 조합의 대량 주문도 확인해 주세요.\n저는 밤길을 밝힐 시야 물약 한 병을 따로 살게요!', 'sight'),
+  ('약초 상인 로빈', '상점이 제법 북적이네요.\n요즘 잠을 설쳐서, 숙면 물약 한 병 부탁해요.', 'sleep'),
 ];
 class ResearchAttempt {
   final List<String> guess;
@@ -59,6 +59,7 @@ class Game {
   int day = 1, gold = 128, customer = 0, served = 0, revenue = 0, spending = 0, investment = 0, level = 1;
   String phase = 'shop';
   bool researchRequested = false, supplierUnlocked = false;
+  int wrongOffers = 0, lostSales = 0;
   Set<String> discovered = {'sleep'};
   Map<String, int> stock = {'sleep': 3, 'sight': 0};
   Map<String, int> materials = {for (final i in ingredients) i.id: i.rare ? 0 : 6};
@@ -79,16 +80,45 @@ class Game {
       : researchRequested ? '밤 연구실에서 어둠을 밝힐 물약 발견하기'
       : '숙면 물약을 팔고 마을 사람들의 이야기를 듣기';
   bool knows(String id) => discovered.contains(id);
-  bool canBrew(Potion p) => knows(p.id) && p.recipe.every((id) => materials[id]! >= level);
+  // One set yields more bottles as the cauldron improves. Quantity is always selectable.
+  bool canBrew(Potion p) => knows(p.id) && p.recipe.every((id) => materials[id]! >= 1);
+  int setsFor(int quantity) => (quantity / level).ceil();
+  int prepareCost(Potion p, int quantity) => p.recipe.fold(0, (sum, id) {
+    final missing = setsFor(quantity) - materials[id]!;
+    return sum + (missing > 0 ? missing * ingredients.firstWhere((i) => i.id == id).price : 0);
+  });
+  String? prepare(String id, int quantity) {
+    final p = potions.where((p) => p.id == id).firstOrNull;
+    if (p == null || !knows(id) || quantity < 1 || quantity > 30) return '제조할 물약과 수량을 확인해 주세요.';
+    final cost = prepareCost(p, quantity);
+    if (gold < cost) return '부족한 재료를 구매할 돈이 모자라요.';
+    final sets = setsFor(quantity);
+    // Check the complete purchase before mutating any money or inventory.
+    for (final id in p.recipe) {
+      materials[id] = (materials[id]! - sets).clamp(0, 1000000);
+    }
+    gold -= cost; spending += cost;
+    stock[id] = stock[id]! + sets * level;
+    return null;
+  }
+  String get orderClarification => orders[customer].$3 == 'sleep'
+      ? '푹 잠들 수 있는 숙면 물약 한 병이 필요해요.'
+      : '어둠 속을 볼 수 있는 시야 물약 한 병이 필요해요.';
   void _advance() {
+    wrongOffers = 0;
     customer++;
     if (!serviceFinished && orders[customer].$3 == 'sight') researchRequested = true;
   }
   String? sell(String id) {
-    if (closed || completed) return '지금은 손님에게 판매할 수 없어요.';
+    if (closed) return '지금은 손님에게 판매할 수 없어요.';
     if (!knows(id)) return '아직 발견하지 못한 레시피예요. 밤에 연구해 주세요.';
-    if (id != orders[customer].$3) return '손님이 원하는 효능을 다시 살펴보세요.';
     if ((stock[id] ?? 0) == 0) return '재고가 없어요. 레시피북에서 생산해 주세요.';
+    if (id != orders[customer].$3) {
+      wrongOffers++;
+      if (wrongOffers == 1) return '이 약은 제가 찾던 게 아니에요. $orderClarification 한 번만 다시 골라 주시겠어요?';
+      lostSales++; _advance();
+      return '이번에도 다른 약이네요… 오늘은 다른 가게에 가 볼게요.';
+    }
     final potion = potions.firstWhere((p) => p.id == id);
     stock[id] = stock[id]! - 1;
     gold += potion.price; revenue += potion.price; served++;
@@ -96,7 +126,7 @@ class Game {
     return null;
   }
   bool skipCustomer() {
-    if (closed || completed) return false;
+    if (closed) return false;
     if (orders[customer].$3 == 'sight') researchRequested = true;
     _advance(); return true;
   }
@@ -105,7 +135,7 @@ class Game {
     if (matches.isEmpty || !knows(id)) return '레시피를 먼저 발견해 주세요.';
     final p = matches.single;
     if (!canBrew(p)) return '재료가 부족해요. 재료 상인에게 구입해 주세요.';
-    for (final material in p.recipe) { materials[material] = materials[material]! - level; }
+    for (final material in p.recipe) { materials[material] = materials[material]! - 1; }
     stock[id] = stock[id]! + level;
     return null;
   }
@@ -118,15 +148,15 @@ class Game {
     materials[id] = materials[id]! + quantity; return true;
   }
   bool upgrade() {
-    if (level >= 3 || gold < upgradeCost || completed) return false;
+    if (level >= 3 || gold < upgradeCost) return false;
     investment += upgradeCost; gold -= upgradeCost; level++; return true;
   }
   bool startNight() {
-    if (night || !serviceFinished || completed) return false;
+    if (night || !serviceFinished) return false;
     phase = 'night'; return true;
   }
   String? research(List<String> guess) {
-    if (!night || completed || !researchRequested || knows('sight')) return '지금은 진행할 연구가 없어요.';
+    if (!night || !researchRequested || knows('sight')) return '지금은 진행할 연구가 없어요.';
     final ids = ingredients.where((i) => !i.rare).map((i) => i.id).toSet();
     if (guess.length != 3 || guess.toSet().length != 3 || !guess.every(ids.contains)) return '서로 다른 재료 세 가지를 순서대로 골라 주세요.';
     final result = scoreRecipe(guess, potions[1].recipe);
@@ -135,7 +165,7 @@ class Game {
     return null;
   }
   bool requestAid() {
-    if (!night || aidDays.contains(day) || gold >= 18 || completed) return false;
+    if (!night || aidDays.contains(day) || gold >= 18) return false;
     for (final i in ingredients.where((i) => !i.rare)) { materials[i.id] = materials[i.id]! + 1; }
     stock['sleep'] = stock['sleep']! + 1; aidDays.add(day); return true;
   }
@@ -145,11 +175,11 @@ class Game {
     supplierUnlocked = true; return true;
   }
   bool nextDay() {
-    if (!night || completed) return false;
-    day++; phase = 'shop'; customer = served = revenue = spending = investment = 0; return true;
+    if (!night) return false;
+    day++; phase = 'shop'; customer = served = revenue = spending = investment = wrongOffers = lostSales = 0; return true;
   }
   String encode() => jsonEncode({'version': 2, 'day': day, 'gold': gold, 'customer': customer,
-    'served': served, 'revenue': revenue, 'spending': spending, 'investment': investment, 'level': level, 'phase': phase,
+    'served': served, 'wrongOffers': wrongOffers, 'lostSales': lostSales, 'revenue': revenue, 'spending': spending, 'investment': investment, 'level': level, 'phase': phase,
     'stock': stock, 'materials': materials, 'discovered': discovered.toList(),
     'researchRequested': researchRequested, 'supplierUnlocked': supplierUnlocked,
     'attempts': attempts.map((a) => a.toJson()).toList(), 'aidDays': aidDays.toList(), 'researchNotebook': researchNotebook});
@@ -166,6 +196,8 @@ class Game {
       ..customer = read('customer', 0, 3)..served = read('served', 0, 3)
       ..revenue = read('revenue', 0, 1000000)..spending = read('spending', 0, 100000000)
       ..investment = read('investment', 0, 100000000)..level = read('level', 1, 3);
+    g.wrongOffers = data.containsKey('wrongOffers') ? read('wrongOffers', 0, 1) : 0;
+    g.lostSales = data.containsKey('lostSales') ? read('lostSales', 0, 3) : 0;
     Map<String, int> inventory(String key, Iterable<String> ids) {
       final m = data[key] as Map<String, dynamic>;
       return {for (final id in ids) id: (() {

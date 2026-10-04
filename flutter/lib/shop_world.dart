@@ -370,11 +370,12 @@ class ShopViewport extends StatefulWidget {
   final Widget? workbench, management;
   final String dayLabel, goldLabel, stockLabel;
   final List<TextButton> actions;
+  final String? guildLabel;
   final String? speakerName;
   final String systemMessage;
   final bool waiting;
   const ShopViewport({super.key, required this.world, required this.dialogue,
-    required this.dayLabel, required this.goldLabel, required this.stockLabel, this.actions = const [], this.speakerName,
+    required this.dayLabel, required this.goldLabel, required this.stockLabel, this.actions = const [], this.speakerName, this.guildLabel,
     this.workbench, this.management, this.waiting = false, this.systemMessage = '', this.onDialogueAction, this.dialogueAction = '물약 고르기'});
   @override
   State<ShopViewport> createState() => _ShopViewportState();
@@ -414,6 +415,9 @@ class _ShopViewportState extends State<ShopViewport> {
     Padding(padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12), child: Row(children: [
       Expanded(child: Align(alignment: Alignment.centerLeft, child: SkinPanel(skin: Skin.parchment, child: Padding(padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         child: Text(widget.dayLabel, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Color(0xff392433), fontSize: 14, fontWeight: FontWeight.bold)))))),
+      if (widget.guildLabel != null) Padding(padding: const EdgeInsets.only(right: 12),
+        child: SkinPanel(skin: Skin.parchment, child: TextButton(onPressed: () => menu(2),
+          child: Text(widget.guildLabel!, style: const TextStyle(color: Color(0xff392433), fontSize: 13))))),
       SkinPanel(skin: Skin.dialogue, child: Padding(padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
         child: Row(mainAxisSize: MainAxisSize.min, children: [const GameIcon(GameGlyph.coin, size: 24), const SizedBox(width: 6), Text(widget.goldLabel, style: const TextStyle(color: worldGold, fontSize: 18))]))),
       IconButton(tooltip: panelOpen ? '패널 접기' : '손님 응대 열기',

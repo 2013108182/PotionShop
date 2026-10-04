@@ -147,7 +147,7 @@ class _ShopScreenState extends State<ShopScreen> {
       PixelButton(label: '새 이야기 시작', icon: Icons.replay, onPressed: restart),
     ],
   ]));
-  String? get visitorId => responseId ?? (!game.completed && !game.night && !game.serviceFinished
+  String? get visitorId => responseId ?? (!game.night && !game.serviceFinished
       ? '${game.day}-${game.customer}' : null);
   bool get canServe => customerReady && arrivedId == visitorId;
   Future<void> research() async {
@@ -166,8 +166,7 @@ class _ShopScreenState extends State<ShopScreen> {
   }
   Widget controls() => Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
 
-    if (game.completed) milestone()
-    else if (visitorId != null && !canServe) ...[
+    if (visitorId != null && !canServe) ...[
       const Text('손님이 진열대를 둘러보고 있어요.', style: TextStyle(color: parchment, fontSize: 16)),
       const Text('카운터에 도착하면 주문을 받을 수 있어요. 그동안 레시피북에서 재고를 준비해도 좋아요.', style: TextStyle(color: lavender, fontSize: 12)),
     ] else if (visitorId != null) ...[
@@ -175,19 +174,25 @@ class _ShopScreenState extends State<ShopScreen> {
         order: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           Text(game.orders[game.customer].$1, style: TextStyle(color: brass, fontSize: 17)),
           const SizedBox(height: 12), Text(game.orders[game.customer].$2),
+          TextButton(onPressed: () { setState(() => responseText = game.orderClarification); }, child: const Text('어떤 효능이 필요하세요?')),
       TextButton(onPressed: canServe ? () {
         final wanted = game.orders[game.customer].$3;
-        if (game.skipCustomer()) change(wanted == 'sight' ? '엘리의 부탁을 기록했어요. 밤에 연구하고 다시 만나 보세요.' : '손님이 다음 기회에 오기로 했어요.');
+        if (game.skipCustomer()) { responseText = null; responseName = null; change(wanted == 'sight' ? '엘리의 부탁을 기록했어요. 밤에 연구하고 다시 만나 보세요.' : '손님이 다음 기회에 오기로 했어요.'); }
       } : null, child: Text(game.knows(game.orders[game.customer].$3) ? '오늘은 주문을 받지 않기' : '아직 없어요 · 요청 기록하기')),
         ]), onGive: (id) {
           final previousId = visitorId, name = game.orders[game.customer].$1;
-          final before = game.gold;
+          final before = game.gold, customerBefore = game.customer;
           final error = game.sell(id);
           if (error == null) {
             responseId = previousId; responseName = name;
             responseText = '고마워요! 잘 쓸게요. 다음에 또 들를게요.';
           }
-          change(error ?? '+${game.gold - before} G · 판매 완료');
+          if (error != null && (game.wrongOffers > 0 || game.customer != customerBefore)) {
+            responseName = name; responseText = error;
+            if (game.customer != customerBefore) responseId = previousId;
+          }
+          change(error == null ? '+${game.gold - before} G · 판매 완료' :
+            game.customer != customerBefore ? '손님이 구매하지 않고 떠났어요 · 놓친 주문 +1' : '');
         }),
     ] else ...[
       Text(game.night ? '연구실 · 어둠 속 시야' : '영업 마감', style: const TextStyle(color: brass, fontSize: 16)),
@@ -211,25 +216,20 @@ class _ShopScreenState extends State<ShopScreen> {
   Widget build(BuildContext context) {
     if (!ready) return const Scaffold(body: Center(child: CircularProgressIndicator()));
     return ShopViewport(systemMessage: status,
+      guildLabel: game.day >= 3 ? (game.completed ? '협회 납품 완료' : '협회 주문 · ${game.stock['sight']}/3') : null,
       dialogueAction: responseId == null ? '물약 고르기' : '대화 마치기',
       onDialogueAction: responseId == null ? null : () => setState(() { responseId = null; responseName = null; responseText = null; customerReady = false; }),
       waiting: visitorId != null && !canServe,
       workbench: ShopTasks(game: game, management: false, canResearch: game.night && game.researchRequested && !game.knows('sight'), onResearch: research, onChanged: change),
       management: ShopTasks(game: game, management: true, canResearch: false, onResearch: research, onChanged: change),
       speakerName: visitorId == null ? null : responseName ?? game.orders[game.customer].$1,
-      dayLabel: '${game.day}일째 · ${game.completed ? '첫 이야기 완료' : game.night ? '밤 연구와 준비' : '낮 영업'}',
+      dayLabel: '${game.day}일째 · ${game.night ? '밤 연구와 준비' : '낮 영업'}',
       goldLabel: '${game.gold} G', stockLabel: '숙면 ${game.stock['sleep']} · 시야 ${game.stock['sight']}',
       world: ShopWorld(customerId: visitorId, customerName: visitorId == null ? '' : responseName ?? game.orders[game.customer].$1,
         speech: visitorId == null ? null : responseText ?? game.orders[game.customer].$2, night: game.night, level: game.level, bottles: game.stock['sleep']! + game.stock['sight']!, onStation: station,
         onReady: (value) { if (mounted) setState(() { customerReady = value; arrivedId = value ? visitorId : null; }); }),
       dialogue: responseId == null ? controls() : const SizedBox.shrink(),
-      actions: [
-        if (game.day >= 3 && !game.completed) TextButton(onPressed: () => showDialog<void>(context: context,
-          builder: (ctx) => Dialog(child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 440),
-            child: SingleChildScrollView(padding: const EdgeInsets.all(16), child: Column(mainAxisSize: MainAxisSize.min, children: [
-              dialogTitle('조합의 주문', ctx), StatefulBuilder(builder: (_, refresh) => milestone()),
-            ]))))).then((_) { if (mounted) setState(() {}); }), child: const Text('특별 주문', style: TextStyle(fontSize: 12))),
-      ],
+
     );
   }
 }
