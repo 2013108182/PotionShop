@@ -62,7 +62,8 @@ class _SkinPainter extends CustomPainter {
 class GameAction extends StatefulWidget {
   final String label;
   final VoidCallback? onPressed;
-  const GameAction({super.key, required this.label, this.onPressed});
+  final bool compact;
+  const GameAction({super.key, required this.label, this.onPressed, this.compact = false});
   @override
   State<GameAction> createState() => _GameActionState();
 }
@@ -75,7 +76,7 @@ class _GameActionState extends State<GameAction> {
         child: FilledButton(onPressed: widget.onPressed, onFocusChange: (v) => setState(() => focused = v),
           style: FilledButton.styleFrom(backgroundColor: Colors.transparent, disabledBackgroundColor: Colors.transparent,
             foregroundColor: const Color(0xffffdfab), disabledForegroundColor: const Color(0xffa99480),
-            shadowColor: Colors.transparent, overlayColor: Colors.transparent, minimumSize: const Size(0, 64),
-            padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 12), shape: const RoundedRectangleBorder()),
-          child: Text(widget.label, textAlign: TextAlign.center, style: const TextStyle(fontFamily: 'Galmuri', fontSize: 20, height: 1.4))))));
+            shadowColor: Colors.transparent, overlayColor: Colors.transparent, minimumSize: Size(0, widget.compact ? 48 : 64),
+            padding: EdgeInsets.symmetric(horizontal: widget.compact ? 10 : 22, vertical: 10), shape: const RoundedRectangleBorder()),
+          child: Text(widget.label, textAlign: TextAlign.center, style: TextStyle(fontFamily: 'Galmuri', fontSize: widget.compact ? 16 : 20, height: 1.4))))));
 }

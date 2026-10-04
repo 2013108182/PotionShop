@@ -101,9 +101,10 @@ class ShopTasks extends StatefulWidget {
 class _ShopTasksState extends State<ShopTasks> {
   int section = 0, recipe = 0, material = 0;
   Game get game => widget.game;
+  bool get compactBook => MediaQuery.sizeOf(context).height < 850;
   static const ink = Color(0xff3c2938);
   Widget heading(String text) => Padding(padding: const EdgeInsets.only(bottom: 14),
-    child: Text(text, style: const TextStyle(color: ink, fontSize: 20, fontWeight: FontWeight.bold)));
+    child: Text(text, style: TextStyle(color: ink, fontSize: compactBook ? 16 : 20, fontWeight: FontWeight.bold)));
   Widget spread(Widget left, Widget right) => LayoutBuilder(builder: (context, box) {
     if (box.maxWidth < 400) return Column(children: [paper(left), const SizedBox(height: 14), paper(right)]);
     return AspectRatio(aspectRatio: 1.3, child: PropSurface(prop: ShopProp.book, child: Padding(padding: EdgeInsets.fromLTRB(box.maxWidth * .10, box.maxWidth * .10, box.maxWidth * .09, 44),
@@ -122,12 +123,13 @@ class _ShopTasksState extends State<ShopTasks> {
         child: Row(children: [potionArt(known[i], 54), const SizedBox(width: 10), Expanded(child: Text(known[i].name))])),
       const SizedBox(height: 12), const Text('기록해 둔 레시피를 골라 제조합니다.'),
     ]), Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      heading(p.name), Text(p.description), const SizedBox(height: 18),
+      heading(p.name), if (!compactBook) Text(p.description), const SizedBox(height: 10),
       Row(mainAxisAlignment: MainAxisAlignment.spaceEvenly, children: [for (final id in p.recipe)
-        Expanded(child: Column(children: [IngredientSprite(id: id, size: 45), Text(ingredientName(id), style: const TextStyle(fontSize: 11)),
+        Expanded(child: Column(children: [Tooltip(message: ingredientName(id), child: IngredientSprite(id: id, size: compactBook ? 32 : 45)),
+          if (!compactBook) Text(ingredientName(id), style: const TextStyle(fontSize: 11)),
           Text('${game.materials[id]} / ${game.level}', style: TextStyle(color: game.materials[id]! < game.level ? Colors.red.shade900 : ink))]))]),
-      const SizedBox(height: 16), Text('완성품 ${game.stock[p.id]}병 · 한 번에 ${game.level}병 제조'), const SizedBox(height: 14),
-      GameAction(label: '${game.level}병 만들기', onPressed: game.canBrew(p) ? () {
+      const SizedBox(height: 12), Text('완성품 ${game.stock[p.id]}병 · ${game.level}병씩 제조', style: const TextStyle(fontSize: 12)), const SizedBox(height: 12),
+      GameAction(compact: compactBook, label: '${game.level}병 만들기', onPressed: game.canBrew(p) ? () {
         final error = game.brew(p.id); widget.onChanged(error ?? '${p.name} ${game.level}병을 만들었어요.');
       } : null),
     ]));
@@ -142,9 +144,9 @@ class _ShopTasksState extends State<ShopTasks> {
             backgroundColor: material == i ? const Color(0x22774f54) : Colors.transparent),
           child: Column(children: [IngredientSprite(id: items[i].id, size: 43), Text(items[i].name, style: const TextStyle(fontSize: 11))])))]),
     ]), Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [heading(item.name),
-      Center(child: IngredientSprite(id: item.id, size: 70)), const SizedBox(height: 12), Text(item.lore),
-      const SizedBox(height: 16), Text('창고에 ${game.materials[item.id]}개'), const SizedBox(height: 18),
-      GameAction(label: '3개 주문 · ${item.price * 3} G', onPressed: game.gold >= item.price * 3 ? () {
+      Center(child: IngredientSprite(id: item.id, size: compactBook ? 42 : 70)), const SizedBox(height: 8), Text(item.lore, style: TextStyle(fontSize: compactBook ? 12 : 14)),
+      const SizedBox(height: 10), Text('창고에 ${game.materials[item.id]}개'), const SizedBox(height: 10),
+      GameAction(compact: compactBook, label: '3개 주문 · ${item.price * 3} G', onPressed: game.gold >= item.price * 3 ? () {
         if (game.buy(item.id)) widget.onChanged('${item.name} 3개가 창고에 도착했어요.');
       } : null),
     ]));
@@ -154,7 +156,7 @@ class _ShopTasksState extends State<ShopTasks> {
     Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [heading('가마솥 Lv.${game.level}'),
       Text(game.level >= 3 ? '최고 단계의 가마솥입니다.' : '다음 단계에서는 한 번에 ${game.level + 1}병을 제조합니다.'),
       const SizedBox(height: 14), Text('재료도 병 수만큼 사용합니다.\n현재 보유 ${game.gold} G'), const SizedBox(height: 24),
-      GameAction(label: game.level >= 3 ? '개선 완료' : '설비 개선 · ${game.upgradeCost} G',
+      GameAction(compact: compactBook, label: game.level >= 3 ? '개선 완료' : '설비 개선 · ${game.upgradeCost} G',
         onPressed: game.level < 3 && game.gold >= game.upgradeCost && !game.completed ? () {
           if (game.upgrade()) widget.onChanged('가마솥을 Lv.${game.level}로 개선했어요.');
         } : null),
