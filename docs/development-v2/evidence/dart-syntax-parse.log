@@ -1,0 +1,4 @@
+tree-sitter 0.26.0 / tree-sitter-dart 0.1.0
+Parsed 44 Dart source files; syntax nodes flagged: 0
+
+Syntax parsing only: not Dart analysis, type checking, compilation, or test execution.

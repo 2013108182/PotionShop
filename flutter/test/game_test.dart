@@ -23,12 +23,13 @@ void main() {
     final night = g.encode();
     expect(g.research(['moon', 'moon', 'salt']), isNotNull);
     expect(g.research(['moon', 'salt']), isNotNull);
-    expect(g.research(['root', 'fairy', 'tear']), isNotNull);
+    expect(g.research(['unknown', 'fairy', 'tear']), isNotNull);
     expect(g.encode(), night);
   });
   test('All distinct guesses score the right ingredients and positions', () {
     const answer = ['moon', 'salt', 'mushroom'];
-    final ids = ingredients.where((i) => !i.rare).map((i) => i.id);
+    // Preserve the original six-ingredient scoring regression as the catalog grows.
+    const ids = ['web', 'tear', 'moon', 'salt', 'mushroom', 'petal'];
     var count = 0;
     for (final a in ids) {
       for (final b in ids.where((id) => id != a)) {

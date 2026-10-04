@@ -21,9 +21,12 @@ void main() {
     }
     for (var i = 0; i < 2; i++) {
       await tap(find.byTooltip('손님 대화')); await tap(find.text('물약 고르기'));
-      final sale = find.widgetWithText(OutlinedButton, '깊은 밤의\n숙면 물약');
-      await tester.ensureVisible(sale); await tester.tap(sale); await tester.pump(const Duration(milliseconds: 700)); await tester.pumpAndSettle();
-      final give = find.widgetWithText(FilledButton, '물약 건네기');
+      if (i == 0) {
+        final sale = find.widgetWithText(OutlinedButton, '깊은 밤의\n숙면 물약');
+        await tester.ensureVisible(sale); await tester.tap(sale); await tester.pump(const Duration(milliseconds: 700)); await tester.pumpAndSettle();
+      }
+      final give = find.widgetWithText(FilledButton,
+          i == 0 ? '물약 건네기' : '깊은 밤의 숙면 물약 건네기 · 35 G');
       await tester.ensureVisible(give); await tester.tap(give); await tester.pump(const Duration(milliseconds: 700)); await tester.pumpAndSettle();
       await tap(find.text('대화 마치기'));
     }
