@@ -19,6 +19,8 @@ void main() {
       final oldGame = (Game()..gold = 999).encode();
       SharedPreferences.setMockInitialValues({'potionshop.v2': oldGame});
       await tester.pumpWidget(const PotionShop()); await tester.pump(const Duration(milliseconds: 700)); await tester.pumpAndSettle();
+      await tester.tap(find.text('새로 시작')); await tester.pumpAndSettle();
+      await tester.tap(find.text('새로 시작하기')); await tester.pumpAndSettle();
       expect(dialogueContaining('오늘부터 이 가게의 주인은 너란다'), findsOneWidget);
       expect(find.byType(FilledButton), findsOneWidget);
       expect(find.text('설비 개선'), findsNothing); expect(find.text('달빛 연구실'), findsNothing);
@@ -46,6 +48,7 @@ void main() {
       // Resume the thank-you scene instead of charging for the first sale again.
       await tester.pumpWidget(const SizedBox()); await tester.pump(const Duration(milliseconds: 700)); await tester.pumpAndSettle();
       await tester.pumpWidget(const PotionShop()); await tester.pump(const Duration(milliseconds: 700)); await tester.pumpAndSettle();
+      await tester.tap(find.text('이어하기')); await tester.pumpAndSettle();
       await tester.tap(find.byTooltip('손님 대화')); await tester.pumpAndSettle();
       expect(dialogueContaining('오늘 밤은 편안히 잘 수 있겠네요'), findsOneWidget); expect(find.text('163 G'), findsOneWidget);
       await action('다음 손님 맞이하기'); await action('숙면 물약 한 병 건네기 · 35 G');
@@ -65,6 +68,7 @@ void main() {
       expect(ResearchSession.decode(night.researchNotebook!).slots, ['moon', null, null]);
       await tester.pumpWidget(const SizedBox()); await tester.pump(const Duration(milliseconds: 700)); await tester.pumpAndSettle();
       await tester.pumpWidget(const PotionShop()); await tester.pump(const Duration(milliseconds: 700)); await tester.pumpAndSettle();
+      await tester.tap(find.text('이어하기')); await tester.pumpAndSettle();
       await action('하던 연구 이어가기');
       for (final name in ['심해 소금', '별빛 버섯']) {
         if (find.text('재료').evaluate().isNotEmpty) { await tester.tap(find.text('재료')); await tester.pumpAndSettle(); }
@@ -85,6 +89,7 @@ void main() {
       expect(shop.stock['sleep'], 1); expect(shop.knows('sight'), isTrue);
       await tester.pumpWidget(const SizedBox()); await tester.pump(const Duration(milliseconds: 700)); await tester.pumpAndSettle();
       await tester.pumpWidget(const PotionShop()); await tester.pump(const Duration(milliseconds: 700)); await tester.pumpAndSettle();
+      await tester.tap(find.text('이어하기')); await tester.pumpAndSettle();
       expect(find.text('2일째 · 낮 영업'), findsOneWidget);
       expect(prefs.getString('potionshop.v2'), oldGame);
       expect(tester.takeException(), isNull);

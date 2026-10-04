@@ -19,6 +19,7 @@ void main() {
     SharedPreferences.setMockInitialValues({openingSaveKey: jsonEncode({'stage': 1, 'game': Game().encode()})});
     await tester.pumpWidget(const PotionShop());
     await tester.pump(); await tester.pump(const Duration(milliseconds: 100));
+    await tester.tap(find.text('이어하기')); await tester.pump(); await tester.pump(const Duration(milliseconds: 400));
     expect(find.text('물약 건네기'), findsNothing);
     expect(find.byKey(const ValueKey('npc-speech')), findsNothing);
     expect(find.byTooltip('손님 대화'), findsNothing);

@@ -413,6 +413,8 @@ class _ShopViewportState extends State<ShopViewport> {
   Widget build(BuildContext context) => CallbackShortcuts(bindings: {const SingleActivator(LogicalKeyboardKey.escape): close},
     child: Focus(autofocus: true, child: Scaffold(backgroundColor: worldInk, body: SafeArea(child: Column(children: [
     Padding(padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12), child: Row(children: [
+      if (Navigator.canPop(context)) IconButton(tooltip: '타이틀로 돌아가기',
+        icon: const GameIcon(GameGlyph.back), onPressed: () => Navigator.maybePop(context)),
       Expanded(child: Align(alignment: Alignment.centerLeft, child: SkinPanel(skin: Skin.parchment, child: Padding(padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         child: Text(widget.dayLabel, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Color(0xff392433), fontSize: 14, fontWeight: FontWeight.bold)))))),
       if (widget.guildLabel != null) Padding(padding: const EdgeInsets.only(right: 12),

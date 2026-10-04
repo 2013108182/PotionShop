@@ -1,4 +1,5 @@
 import 'ui_art.dart';
+import 'title_screen.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -25,7 +26,9 @@ class PotionShop extends StatelessWidget {
       colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xff8055b5), brightness: Brightness.dark),
       textTheme: const TextTheme(bodyMedium: TextStyle(height: 1.5)), useMaterial3: true),
     routes: {'/shop': (_) => const ShopScreen(), '/research': (_) => const ResearchStudio()}, home: researchFirst == true ? const ResearchStudio()
-      : researchFirst == false ? const ShopScreen() : OpeningJourney(onFinished: () => const ShopScreen(saveKey: storySaveKey)));
+      : researchFirst == false ? const ShopScreen() : TitleScreen(
+        opening: () => OpeningJourney(onFinished: () => const ShopScreen(saveKey: storySaveKey)),
+        shop: (key) => ShopScreen(saveKey: key)));
 }
 class ShopScreen extends StatefulWidget {
   final String saveKey;
