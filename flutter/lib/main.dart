@@ -153,6 +153,7 @@ class _ShopScreenState extends State<ShopScreen> {
   String? get visitorId => responseId ?? (!game.night && !game.serviceFinished
       ? '${game.day}-${game.customer}' : null);
   bool get canServe => customerReady && arrivedId == visitorId;
+  bool get hasPendingResearch => game.researchRequested && !game.knows('sight');
   Future<void> research() async {
     if (!game.night) { change('연구는 영업을 마친 뒤에 할 수 있어요.'); return; }
     if (!game.researchRequested) { change('손님의 새로운 부탁이 생기면 연구할 수 있어요.'); return; }
@@ -201,12 +202,12 @@ class _ShopScreenState extends State<ShopScreen> {
       Text(game.night ? '내일의 영업 준비' : '영업 마감', style: const TextStyle(color: brass, fontSize: 16)),
       Text('판매 ${game.served}건 · 매출 ${game.revenue} G · 지출 ${game.spending + game.investment} G', style: const TextStyle(fontSize: 12)),
       const SizedBox(height: 8),
-      if (!game.night) PixelButton(label: '밤 연구실로 가기', icon: Icons.nightlight_round,
-        onPressed: () { if (game.startNight()) change(game.knows('sight') ? '작업대에서 내일 팔 물약을 준비하세요.' : '엘리의 부탁을 연구할 시간이에요.'); }),
+      if (!game.night) PixelButton(label: hasPendingResearch ? '밤 연구실로 가기' : '내일 영업 준비하기', icon: Icons.nightlight_round,
+        onPressed: () { if (game.startNight()) change(hasPendingResearch ? '엘리의 부탁을 연구할 시간이에요.' : '작업대에서 내일 팔 물약을 준비하세요.'); }),
       if (game.night) ...[
         Text('남은 물약 · 숙면 ${game.stock['sleep']}병 · 시야 ${game.stock['sight']}병', style: const TextStyle(color: brass, fontSize: 15)),
         const SizedBox(height: 12),
-        if (game.researchRequested && !game.knows('sight')) PixelButton(label: '엘리의 물약 연구하기', icon: Icons.science, onPressed: research),
+        if (hasPendingResearch) PixelButton(label: '엘리의 물약 연구하기', icon: Icons.science, onPressed: research),
         const SizedBox(height: 6),
         PixelButton(label: '준비를 마치고 ${game.day + 1}일째 시작', icon: Icons.wb_sunny_outlined,
           onPressed: () { if (game.nextDay()) change('새로운 하루예요. 연구 기록과 창고는 그대로 남아 있어요.'); }),
@@ -225,7 +226,7 @@ class _ShopScreenState extends State<ShopScreen> {
       dialogueAction: responseId == null ? '물약 고르기' : '대화 마치기',
       onDialogueAction: responseId == null ? null : () => setState(() { responseId = null; responseName = null; responseText = null; customerReady = false; }),
       waiting: visitorId != null && !canServe,
-      workbench: ShopTasks(game: game, management: false, canResearch: game.night && game.researchRequested && !game.knows('sight'), onResearch: research, onChanged: change),
+      workbench: ShopTasks(game: game, management: false, canResearch: game.night && hasPendingResearch, onResearch: research, onChanged: change),
       management: ShopTasks(game: game, management: true, canResearch: false, onResearch: research, onChanged: change),
       speakerName: visitorId == null ? null : responseName ?? game.orders[game.customer].$1,
       dayLabel: '${game.day}일째 · ${game.night ? '밤 연구와 준비' : '낮 영업'}',
