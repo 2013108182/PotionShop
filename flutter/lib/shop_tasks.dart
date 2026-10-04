@@ -105,7 +105,7 @@ class _ShopTasksState extends State<ShopTasks> {
   Widget heading(String text) => Padding(padding: const EdgeInsets.only(bottom: 14),
     child: Text(text, style: const TextStyle(color: ink, fontSize: 20, fontWeight: FontWeight.bold)));
   Widget spread(Widget left, Widget right) => LayoutBuilder(builder: (context, box) {
-    if (box.maxWidth < 460) return Column(children: [paper(left), const SizedBox(height: 14), paper(right)]);
+    if (box.maxWidth < 400) return Column(children: [paper(left), const SizedBox(height: 14), paper(right)]);
     return AspectRatio(aspectRatio: 1.3, child: PropSurface(prop: ShopProp.book, child: Padding(padding: EdgeInsets.fromLTRB(box.maxWidth * .10, box.maxWidth * .10, box.maxWidth * .09, 44),
       child: DefaultTextStyle.merge(style: const TextStyle(color: ink, fontSize: 14), child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Expanded(child: SingleChildScrollView(child: left)), SizedBox(width: box.maxWidth * .08), Expanded(child: SingleChildScrollView(child: right))])))));
