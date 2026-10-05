@@ -1,8 +1,6 @@
 import 'ui_art.dart';
 import 'title_screen.dart';
 import 'dart:async';
-import 'dart:convert';
-import 'diary_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'game.dart';
@@ -41,9 +39,7 @@ class ShopScreen extends StatefulWidget {
 class _ShopScreenState extends State<ShopScreen> {
   Game game = Game();
   SharedPreferences? prefs;
-  bool ready = false, customerReady = false, saving = false, saveFailed = false;
-  String? loadError;
-  String? pendingSnapshot;
+  bool ready = false, customerReady = false;
   String? arrivedId;
   String? responseId, responseName, responseText;
   Timer? statusTimer;
@@ -55,108 +51,53 @@ class _ShopScreenState extends State<ShopScreen> {
     try {
       prefs = await SharedPreferences.getInstance();
       final saved = prefs!.getString(widget.saveKey);
-      if (saved != null) {
-        game = Game.decode(saved);
-        final version = (jsonDecode(saved) as Map<String, dynamic>)['version'];
-        if (version == 2 && !prefs!.containsKey('${widget.saveKey}.backup.v2')) {
-          if (!await prefs!.setString('${widget.saveKey}.backup.v2', saved)) {
-            throw StateError('Cannot preserve original save');
-          }
-        }
-      }
+      if (saved != null) { game = Game.decode(saved); }
+      else if (prefs!.containsKey('potionshop.v1')) { status = '새 이야기는 1일째부터 시작해요. 이전 상점 저장은 별도로 보관되어 있어요.'; }
       final studioSave = prefs!.getString('potionshop.research.v1');
       if (widget.saveKey == 'potionshop.v2' && studioSave != null && !game.knows('sight')) {
-        // A damaged independent notebook must not replace a valid shop save.
-        try {
-          final studio = ResearchSession.decode(studioSave);
-          if (studio.solved) {
-            game.attempts = [...studio.attempts];
-            game.setNotebook('sight', studio.encode());
-            game.requestResearch('sight');
-            game.discoverRecipe('sight');
-            pendingSnapshot = game.encode();
-            if (!await prefs!.setString(widget.saveKey, pendingSnapshot!)) {
-              saveFailed = true;
-            } else { pendingSnapshot = null; }
-          }
-        } on FormatException { status = '별도 연구 기록을 읽지 못했어요. 상점 기록은 유지했어요.'; }
+        final studio = ResearchSession.decode(studioSave);
+        if (studio.solved) {
+          game.attempts = [...studio.attempts];
+          game.researchNotebook = studio.encode();
+          game.researchRequested = true;
+          game.discovered.add('sight');
+          game.stock['sight'] = game.stock['sight']! + 1;
+          status = '연구실에서 발견한 시야 물약을 레시피북에 옮겼어요. 실험 물약 1병도 보관했어요.';
+          await prefs!.setString(widget.saveKey, game.encode());
+        }
       }
-      if (game.night) {
-        game.ensureNextDayPlan();
-        pendingSnapshot = game.encode();
-        if (!await prefs!.setString(widget.saveKey, pendingSnapshot!)) {
-          saveFailed = true;
-        } else { pendingSnapshot = null; }
-      }
-    } catch (_) {
-      loadError = '기록을 불러오지 못했어요. 원래 저장은 그대로 보관했어요.';
-    }
+    } catch (_) { status = '기록을 불러오지 못했어요. 새 상점으로 시작합니다.'; }
     if (mounted) setState(() => ready = true);
   }
   @override
   void dispose() { statusTimer?.cancel(); super.dispose(); }
-  Future<bool> saveNow(String message) async {
-    if (loadError != null) return false;
+  void change(String message) {
     statusTimer?.cancel();
-    final snapshot = game.encode();
-    pendingSnapshot = snapshot;
-    if (mounted) setState(() { saving = true; status = '기록을 남기고 있어요…'; });
-    var stored = false;
-    final operation = saveQueue.then((_) async {
-      try { stored = await prefs?.setString(widget.saveKey, snapshot) == true; }
-      catch (_) { stored = false; }
-      if (pendingSnapshot == snapshot) {
-        if (stored) pendingSnapshot = null;
-        if (mounted) setState(() {
-          saving = false; saveFailed = !stored;
-          status = stored ? message : '기록을 저장하지 못했어요. 다시 저장한 뒤 이어갈 수 있어요.';
-        });
-      }
+    setState(() => status = message);
+    statusTimer = Timer(const Duration(seconds: 4), () { if (mounted) setState(() => status = ''); });
+    final encoded = game.encode();
+    saveQueue = saveQueue.then((_) async {
+      try {
+        final stored = await prefs?.setString(widget.saveKey, encoded);
+        if (stored != true && mounted) setState(() => status = '저장할 수 없어요. 이번 플레이는 현재 화면에서 유지됩니다.');
+      } catch (_) { if (mounted) setState(() => status = '저장에 실패했어요. 현재 플레이는 계속할 수 있어요.'); }
     });
-    saveQueue = operation;
-    await operation;
-    if (stored && mounted && !saveFailed && !saving) {
-      statusTimer = Timer(const Duration(seconds: 4), () { if (mounted) setState(() => status = ''); });
-      recordArrivalIfReady();
-    }
-    return stored;
-  }
-  void change(String message) { unawaited(saveNow(message)); }
-  void recordArrivalIfReady() {
-    if (!mounted || saving || saveFailed || loadError != null || !canServe || responseId != null) return;
-    final before = game.encode();
-    final message = game.recordArrival();
-    if (game.encode() != before) change(message ?? '이웃의 이야기를 수첩에 남겼어요.');
-  }
-  Future<void> openDiary() async {
-    if (saving || saveFailed) return;
-    await Navigator.push(context, MaterialPageRoute<void>(builder: (_) => DiaryScreen(
-      game: game, onChanged: () { if (mounted) setState(() {}); },
-      onPersist: () => saveNow('다이어리를 정리했어요.'))));
-    if (mounted) setState(() {});
-  }
-  void enterNight() {
-    if (game.startNight()) {
-      game.ensureNextDayPlan();
-      change(hasPendingResearch ? '부탁받은 물약을 연구할 시간이에요.' : '작업대에서 내일 팔 물약을 준비하세요.');
-    }
   }
   Future<void> openBook() async {
-    if (saving || saveFailed) return;
     await showDialog<void>(context: context, builder: (dialogContext) => StatefulBuilder(builder: (context, refresh) => Dialog(
       backgroundColor: ink, child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 520),
       child: SingleChildScrollView(padding: const EdgeInsets.all(20), child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         dialogTitle('나의 레시피북', dialogContext),
         const Text('생산에는 레시피의 재료가 각각 1개씩 필요해요.', style: TextStyle(color: lavender)), gap,
         for (final p in potions) Padding(padding: const EdgeInsets.only(bottom: 12), child: PixelPanel(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          Text(game.knows(p.id) ? p.name : '미발견 물약', style: const TextStyle(color: brass, fontSize: 17, fontWeight: FontWeight.bold)),
+          Text(game.knows(p.id) ? p.name : '미발견 · 어둠 속 시야를 밝히는 물약', style: const TextStyle(color: brass, fontSize: 17, fontWeight: FontWeight.bold)),
           if (game.knows(p.id)) ...[
             Text(p.description), Text(p.ingredientText, style: const TextStyle(color: lavender)),
-            for (final id in p.recipe) Text('${ingredientName(id)} ${game.materials[id]}개 / 필요 1개', style: const TextStyle(fontSize: 12)), gap,
-            PixelButton(label: '${game.level}병 생산 · 재료 각 1개', icon: Icons.science_outlined,
-              onPressed: game.canBrew(p) ? () { if (saving || saveFailed) return; final error = game.brew(p.id); change(error ?? '${p.name} ${game.level}병을 만들었어요.'); refresh(() {}); } : null),
+            for (final id in p.recipe) Text('${ingredientName(id)} ${game.materials[id]}개 / 필요 ${game.level}개', style: const TextStyle(fontSize: 12)), gap,
+            PixelButton(label: '${game.level}병 생산 · 재료 각 ${game.level}개', icon: Icons.science_outlined,
+              onPressed: game.canBrew(p) ? () { final error = game.brew(p.id); change(error ?? '${p.name} ${game.level}병을 만들었어요.'); refresh(() {}); } : null),
             Text('완성품 재고 ${game.stock[p.id]}병', style: const TextStyle(color: brass)),
-          ] else const Text('이웃의 부탁을 듣고 밤 연구실에서 발견해 보세요.'),
+          ] else const Text('엘리의 부탁을 듣고 밤 연구실에서 발견해 보세요.'),
         ]))),
       ]))))));
   }
@@ -165,39 +106,35 @@ class _ShopScreenState extends State<ShopScreen> {
     IconButton(onPressed: () => Navigator.pop(dialogContext), icon: const GameIcon(GameGlyph.close), tooltip: '닫기'),
   ]);
   Future<void> openMaterials() async {
-    if (saving || saveFailed) return;
     await showDialog<void>(context: context, builder: (dialogContext) => StatefulBuilder(builder: (context, refresh) => Dialog(
       backgroundColor: ink, child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 520),
       child: SingleChildScrollView(padding: const EdgeInsets.all(20), child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         dialogTitle(game.supplierUnlocked ? '희귀 재료 상인 세이지' : '재료 상인 로빈', dialogContext),
-        Text('보유 ${game.gold} G · 연구는 무료, 제조에는 재료가 필요해요.', style: const TextStyle(color: lavender)), gap,
+        Text('보유 ${game.gold} G · 연구와 생산이 같은 창고를 사용해요.', style: const TextStyle(color: lavender)), gap,
         for (final i in ingredients) Padding(padding: const EdgeInsets.only(bottom: 10), child: PixelPanel(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           Text(i.name, style: const TextStyle(color: brass, fontWeight: FontWeight.bold)), Text(i.lore),
           Text('보유 ${game.materials[i.id]}개', style: const TextStyle(color: lavender)),
-          if (!game.canBuyIngredient(i.id)) const Text('새로운 부탁이나 조합 거래가 열리면 구입할 수 있어요.', style: TextStyle(fontSize: 12))
+          if (i.rare && !game.supplierUnlocked) const Text('길잡이 조합의 특별 주문을 완료하면 거래할 수 있어요.', style: TextStyle(fontSize: 12))
           else PixelButton(label: '3개 구입 · ${i.price * 3} G', icon: Icons.shopping_bag_outlined,
-            onPressed: game.gold >= i.price * 3 ? () { if (saving || saveFailed) return; if (game.buy(i.id)) { change('${i.name} 3개를 구입했어요.'); refresh(() {}); } } : null),
+            onPressed: game.gold >= i.price * 3 ? () { if (game.buy(i.id)) { change('${i.name} 3개를 구입했어요.'); refresh(() {}); } } : null),
         ]))),
       ]))))));
   }
   Future<void> openUpgrades() async {
-    if (saving || saveFailed) return;
     await showDialog<void>(context: context, builder: (dialogContext) => StatefulBuilder(builder: (context, refresh) => Dialog(
       backgroundColor: ink, child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 420), child: SingleChildScrollView(padding: const EdgeInsets.all(20), child: Column(mainAxisSize: MainAxisSize.min, children: [
         dialogTitle('가마솥 공방', dialogContext), const GameIcon(GameGlyph.flask, size: 50), gap,
         Text('가마솥 Lv.${game.level}', style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)), gap,
-        Text(game.level >= 3 ? '최고 단계에 도달했어요!' : '한 번에 ${game.level + 1}병을 생산해요.\n같은 재료 한 세트를 사용해요.', textAlign: TextAlign.center), gap,
+        Text(game.level >= 3 ? '최고 단계에 도달했어요!' : '한 번에 ${game.level + 1}병을 생산해요.\n재료도 병 수만큼 필요해요.', textAlign: TextAlign.center), gap,
         PixelButton(label: game.level >= 3 ? '개선 완료' : '설비 개선 · ${game.upgradeCost} G', icon: Icons.build_outlined,
-          onPressed: game.level < 3 && game.gold >= game.upgradeCost ? () {
-            if (saving || saveFailed) return;
+          onPressed: game.level < 3 && game.gold >= game.upgradeCost && !game.completed ? () {
             if (game.upgrade()) { change('가마솥이 Lv.${game.level}로 성장했어요!'); refresh(() {}); }
           } : null), gap, Text('보유 ${game.gold} G', style: const TextStyle(color: brass)),
       ]))))));
   }
   Future<void> restart() async {
-    if (saving || saveFailed) return;
     final confirmed = await showDialog<bool>(context: context, builder: (ctx) => AlertDialog(
-      title: const Text('새 이야기로 시작할까요?'), content: const Text('현재 이야기의 진행 기록을 새로 시작해요.'),
+      title: const Text('새 이야기로 시작할까요?'), content: const Text('현재 3일 이야기의 진행 기록을 새로 시작해요.'),
       actions: [TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('이어 하기')),
         TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('1일째부터 시작'))]));
     if (confirmed == true && mounted) { game = Game(); change('새로운 상점의 첫날이에요.'); }
@@ -209,23 +146,17 @@ class _ShopScreenState extends State<ShopScreen> {
       onPressed: game.knows('sight') && game.stock['sight']! >= 3 ? () { if (game.deliver()) change('첫 특별 주문 완료! 세이지와의 거래가 열렸어요. +120 G'); } : null)
     else ...[
       PixelButton(label: '희귀 재료 상인 만나기', icon: Icons.storefront, onPressed: openMaterials), gap,
-      const Text('새 이웃과 이야기가 이어집니다.\n다이어리에서 부탁과 다음 방문을 확인해 보세요.', style: TextStyle(color: lavender)), gap,
+      const Text('첫 세 날의 이야기를 마쳤어요.\n맨드레이크와 요정 가루는 다음 연구를 위한 재료예요.', style: TextStyle(color: lavender)), gap,
       PixelButton(label: '새 이야기 시작', icon: Icons.replay, onPressed: restart),
     ],
   ]));
   String? get visitorId => responseId ?? (!game.night && !game.serviceFinished
-      ? game.currentVisitId ?? '${game.day}-${game.customer}' : null);
+      ? '${game.day}-${game.customer}' : null);
   bool get canServe => customerReady && arrivedId == visitorId;
-  bool get hasPendingResearch => game.pendingResearchIds.isNotEmpty;
-  Future<void> research({String? potionId}) async {
-    if (saving || saveFailed) return;
+  Future<void> research() async {
     if (!game.night) { change('연구는 영업을 마친 뒤에 할 수 있어요.'); return; }
-    final target = potionId ?? (game.pendingResearchIds.isEmpty ? null : game.pendingResearchIds.first);
-    if (target == null || !game.canResearchPotion(target)) {
-      change('손님의 새로운 부탁이 생기면 연구할 수 있어요.'); return;
-    }
-    await Navigator.push(context, MaterialPageRoute<void>(builder: (_) => ResearchStudio(
-      game: game, potionId: target, persistGame: saveNow)));
+    if (!game.researchRequested) { change('손님의 새로운 부탁이 생기면 연구할 수 있어요.'); return; }
+    await Navigator.push(context, MaterialPageRoute<void>(builder: (_) => ResearchStudio(game: game, onGameChanged: change)));
     if (mounted) setState(() {});
   }
   void station(String id) {
@@ -236,46 +167,28 @@ class _ShopScreenState extends State<ShopScreen> {
       case 'research': research();
     }
   }
-  void finishStory({bool alternative = false}) {
-    final previousId = visitorId, name = game.orders[game.customer].$1;
-    final error = game.resolveStory(chooseAlternative: alternative, visitId: previousId);
-    if (error == null) {
-      responseId = previousId; responseName = name;
-      responseText = game.lastServiceReaction ?? '이야기를 나눠 줘서 고마워요.';
-    }
-    change(error ?? '이웃의 이야기를 다이어리에 남겼어요.');
-  }
   Widget controls() => Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
 
     if (visitorId != null && !canServe) ...[
       const Text('손님이 진열대를 둘러보고 있어요.', style: TextStyle(color: parchment, fontSize: 16)),
       const Text('카운터에 도착하면 주문을 받을 수 있어요. 그동안 레시피북에서 재고를 준비해도 좋아요.', style: TextStyle(color: lavender, fontSize: 12)),
-    ] else if (visitorId != null && game.currentStory != null &&
-        (game.currentStoryNeedsReview || game.currentStory!.potionId == null)) ...[
-      Text(game.orders[game.customer].$1, style: const TextStyle(color: brass, fontSize: 17)),
-      GameParagraph(game.orders[game.customer].$2),
-      PixelButton(label: game.currentStoryNeedsReview ? '사용 후기 듣기' : '이야기 나누기',
-        icon: Icons.menu_book, onPressed: finishStory),
     ] else if (visitorId != null) ...[
       PotionSelection(key: ValueKey(visitorId), game: game, enabled: canServe,
         order: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           Text(game.orders[game.customer].$1, style: TextStyle(color: brass, fontSize: 17)),
           const SizedBox(height: 12), GameParagraph(game.orders[game.customer].$2),
           TextButton(onPressed: () { setState(() => responseText = game.orderClarification); }, child: const Text('어떤 효능이 필요하세요?')),
-      if (game.currentStory?.optional == true) TextButton(
-            onPressed: () => finishStory(alternative: true),
-            child: Text(game.currentStory!.alternativeText ?? '다른 방법으로 돕기')),
       TextButton(onPressed: canServe ? () {
         final wanted = game.orders[game.customer].$3;
-        if (game.skipCustomer()) { responseText = null; responseName = null; change(!game.knows(wanted) ? '부탁을 기록했어요. 밤에 연구하고 다시 만나 보세요.' : '손님이 다음 기회에 오기로 했어요.'); }
+        if (game.skipCustomer()) { responseText = null; responseName = null; change(wanted == 'sight' ? '엘리의 부탁을 기록했어요. 밤에 연구하고 다시 만나 보세요.' : '손님이 다음 기회에 오기로 했어요.'); }
       } : null, child: Text(game.knows(game.orders[game.customer].$3) ? '오늘은 주문을 받지 않기' : '아직 없어요 · 요청 기록하기')),
         ]), onGive: (id) {
           final previousId = visitorId, name = game.orders[game.customer].$1;
           final before = game.gold, customerBefore = game.customer;
-          final error = game.sell(id, visitId: previousId);
+          final error = game.sell(id);
           if (error == null) {
             responseId = previousId; responseName = name;
-            responseText = game.lastServiceReaction ?? '고마워요. 다음에 사용한 이야기를 들려드릴게요.';
+            responseText = '고마워요! 잘 쓸게요. 다음에 또 들를게요.';
           }
           if (error != null && (game.wrongOffers > 0 || game.customer != customerBefore)) {
             responseName = name; responseText = error;
@@ -286,16 +199,14 @@ class _ShopScreenState extends State<ShopScreen> {
         }),
     ] else ...[
       Text(game.night ? '내일의 영업 준비' : '영업 마감', style: const TextStyle(color: brass, fontSize: 16)),
-      Text('판매 ${game.served}건 · 총수입 ${game.revenue} G · 재료 구매 ${game.spending} G · 투자 ${game.investment} G', style: const TextStyle(fontSize: 12)),
+      Text('판매 ${game.served}건 · 매출 ${game.revenue} G · 지출 ${game.spending + game.investment} G', style: const TextStyle(fontSize: 12)),
       const SizedBox(height: 8),
-      if (!game.night) PixelButton(label: hasPendingResearch ? '밤 연구실로 가기' : '내일 영업 준비하기', icon: Icons.nightlight_round,
-        onPressed: enterNight),
+      if (!game.night) PixelButton(label: '밤 연구실로 가기', icon: Icons.nightlight_round,
+        onPressed: () { if (game.startNight()) change(game.knows('sight') ? '작업대에서 내일 팔 물약을 준비하세요.' : '엘리의 부탁을 연구할 시간이에요.'); }),
       if (game.night) ...[
-        Text('남은 물약 · 총 ${game.stock.values.fold<int>(0, (total, count) => total + count)}병', style: const TextStyle(color: brass, fontSize: 15)),
+        Text('남은 물약 · 숙면 ${game.stock['sleep']}병 · 시야 ${game.stock['sight']}병', style: const TextStyle(color: brass, fontSize: 15)),
         const SizedBox(height: 12),
-        for (final id in game.pendingResearchIds) PixelButton(
-          label: id == 'sight' ? '엘리의 물약 연구하기' : '${potions.firstWhere((p) => p.id == id).name} 연구하기',
-          icon: Icons.science, onPressed: () => research(potionId: id)),
+        if (game.researchRequested && !game.knows('sight')) PixelButton(label: '엘리의 물약 연구하기', icon: Icons.science, onPressed: research),
         const SizedBox(height: 6),
         PixelButton(label: '준비를 마치고 ${game.day + 1}일째 시작', icon: Icons.wb_sunny_outlined,
           onPressed: () { if (game.nextDay()) change('새로운 하루예요. 연구 기록과 창고는 그대로 남아 있어요.'); }),
@@ -309,36 +220,36 @@ class _ShopScreenState extends State<ShopScreen> {
   @override
   Widget build(BuildContext context) {
     if (!ready) return const Scaffold(body: Center(child: CircularProgressIndicator()));
-    if (loadError != null) return Scaffold(body: SafeArea(child: Center(child: Padding(
-      padding: const EdgeInsets.all(24), child: Column(mainAxisSize: MainAxisSize.min, children: [
-        Text(loadError!, textAlign: TextAlign.center),
-        TextButton(onPressed: () { setState(() { ready = false; loadError = null; }); unawaited(load()); }, child: const Text('기록 다시 읽기')),
-        if (Navigator.canPop(context)) TextButton(onPressed: () => Navigator.pop(context), child: const Text('돌아가기')),
-      ])))));
-    return PopScope(canPop: !saving && !saveFailed, child: Stack(children: [AbsorbPointer(absorbing: saving || saveFailed, child: ShopViewport(systemMessage: status,
+    return ShopViewport(systemMessage: status,
       guildLabel: game.day >= 3 ? (game.completed ? '협회 납품 완료' : '협회 주문 · ${game.stock['sight']}/3') : null,
       dialogueAction: responseId == null ? '물약 고르기' : '대화 마치기',
       onDialogueAction: responseId == null ? null : () => setState(() { responseId = null; responseName = null; responseText = null; customerReady = false; }),
       waiting: visitorId != null && !canServe,
-      workbench: ShopTasks(game: game, management: false, canResearch: game.night && hasPendingResearch, onResearch: research, onResearchPotion: (id) => research(potionId: id), onChanged: change),
-      management: ShopTasks(game: game, management: true, canResearch: false, onResearch: research, onResearchPotion: (id) => research(potionId: id), onChanged: change),
+      workbench: ShopTasks(game: game, management: false, canResearch: game.night && game.researchRequested && !game.knows('sight'), onResearch: research, onChanged: change),
+      management: ShopTasks(game: game, management: true, canResearch: false, onResearch: research, onChanged: change),
       speakerName: visitorId == null ? null : responseName ?? game.orders[game.customer].$1,
       dayLabel: '${game.day}일째 · ${game.night ? '밤 연구와 준비' : '낮 영업'}',
-      goldLabel: '${game.gold} G', stockLabel: '물약 ${game.stock.values.fold<int>(0, (total, count) => total + count)}병',
+      goldLabel: '${game.gold} G', stockLabel: '숙면 ${game.stock['sleep']} · 시야 ${game.stock['sight']}',
       world: ShopWorld(customerId: visitorId, customerName: visitorId == null ? '' : responseName ?? game.orders[game.customer].$1,
-        speech: visitorId == null ? null : responseText ?? game.orders[game.customer].$2, night: game.night, level: game.level, bottles: game.stock.values.fold<int>(0, (total, count) => total + count), onStation: station,
-        onReady: (value) { if (mounted) { setState(() { customerReady = value; arrivedId = value ? visitorId : null; }); recordArrivalIfReady(); } }),
+        speech: visitorId == null ? null : responseText ?? game.orders[game.customer].$2, night: game.night, level: game.level, bottles: game.stock['sleep']! + game.stock['sight']!, onStation: station,
+        onReady: (value) { if (mounted) setState(() { customerReady = value; arrivedId = value ? visitorId : null; }); }),
       dialogue: responseId == null ? controls() : const SizedBox.shrink(),
-    )),
-      if (!saveFailed && !saving) Positioned(right: 16, bottom: 82, child: SafeArea(child: FilledButton.icon(
-        onPressed: openDiary, icon: const Icon(Icons.menu_book), label: const Text('주민 다이어리')))),
-      if (saveFailed || saving) Positioned(left: 16, right: 16, bottom: 16, child: SafeArea(child: Material(
-        color: ink, child: Padding(padding: const EdgeInsets.all(16), child: Column(mainAxisSize: MainAxisSize.min, children: [
-          Text(saving ? '기록을 저장하고 있어요…' : '저장하지 못했어요. 현재 진행은 화면에 남아 있어요.', textAlign: TextAlign.center),
-          if (saveFailed && !saving) TextButton(onPressed: () => saveNow('다시 저장했어요. 이어서 진행해 주세요.'), child: const Text('다시 저장하기')),
-        ]))))),
-    ]));
+
+    );
   }
+}
+class ResearchPanel extends StatelessWidget {
+  final Game game;
+  final ValueChanged<String> onChanged;
+  const ResearchPanel({super.key, required this.game, required this.onChanged});
+  @override
+  Widget build(BuildContext context) => PixelPanel(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+    const Text('연구실 · 어둠 속 시야', style: TextStyle(color: brass, fontSize: 19)), gap,
+    Text(game.knows('sight') ? '시야 물약 연구가 끝났어요. 레시피북에서 생산할 수 있어요.' : '엘리가 밤 숲길을 밝힐 물약을 부탁했어요. 재료의 성질과 실험 기록으로 조합을 찾아보세요.'), gap,
+    if (game.researchRequested) PixelButton(label: '연구실 열기', icon: Icons.science,
+      onPressed: () => Navigator.push(context, MaterialPageRoute<void>(builder: (_) => ResearchStudio(game: game, onGameChanged: onChanged)))),
+    const Text('연구는 재료를 소모하지 않아요. 생산할 때만 재료가 필요해요.', style: TextStyle(color: lavender, fontSize: 12)),
+  ]));
 }
 class PixelPanel extends StatelessWidget {
   final Widget child;

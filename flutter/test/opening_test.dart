@@ -6,7 +6,6 @@ import 'package:potionshop/game.dart';
 import 'package:potionshop/main.dart';
 import 'package:potionshop/opening_screen.dart';
 import 'package:potionshop/research_session.dart';
-import 'package:potionshop/tutorial_screen.dart';
 
 Finder dialogueContaining(String text) => find.byWidgetPredicate((widget) => widget is Text && (widget.semanticsLabel ?? widget.data ?? '').replaceAll('\u2060', '').contains(text));
 
@@ -41,22 +40,6 @@ void main() {
       await tester.tap(find.byTooltip('손님 대화')); await tester.pumpAndSettle();
       expect(dialogueContaining('요즘 잠을 통 못 자겠어요'), findsOneWidget);
       await action('숙면 물약 한 병 건네기 · 35 G');
-      expect(find.byType(TutorialScreen), findsOneWidget);
-      for (var step = 0; step < 20; step++) {
-        final before = await SharedPreferences.getInstance();
-        final saved = jsonDecode(before.getString(openingSaveKey)!) as Map<String, dynamic>;
-        final practicing = Game.decode(saved['game'] as String);
-        expect(practicing.gold, 128); expect(practicing.stock['sleep'], 3);
-        var next = find.byKey(const ValueKey('tutorial-next'));
-        if (next.evaluate().isEmpty) next = find.byKey(const ValueKey('tutorial-submit'));
-        if (next.evaluate().isEmpty) next = find.byWidgetPredicate((widget) =>
-          widget is OutlinedButton && widget.onPressed != null &&
-          widget.key is ValueKey<String> && (widget.key as ValueKey<String>).value.startsWith('tutorial-sample-'));
-        expect(next, findsOneWidget);
-        await tester.ensureVisible(next); await tester.tap(next);
-        await tester.pump(const Duration(milliseconds: 700)); await tester.pumpAndSettle();
-      }
-      expect(find.byType(TutorialScreen), findsNothing);
       expect(find.text('163 G'), findsOneWidget);
       final prefs = await SharedPreferences.getInstance();
       final firstSale = jsonDecode(prefs.getString(openingSaveKey)!) as Map<String, dynamic>;
@@ -113,6 +96,7 @@ void main() {
     });
   }
 }
+
 
 
 

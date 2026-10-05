@@ -382,7 +382,6 @@ class ShopViewport extends StatefulWidget {
 }
 class _ShopViewportState extends State<ShopViewport> {
   int tab = 0;
-  int guildVisit = 0;
   bool panelOpen = false, talking = false;
   Size? visiblePanelSize;
   bool get hasCustomer => widget.world.customerId != null;
@@ -408,11 +407,6 @@ class _ShopViewportState extends State<ShopViewport> {
     if (index == 0 && hasCustomer) { talk(); return; }
     setState(() { tab = index; talking = false; panelOpen = true; });
   }
-  void openGuildOrder() {
-    // A direct order shortcut starts at the order page, not a remembered subtab.
-    setState(() { guildVisit++; tab = 2; talking = false; panelOpen = true; });
-    if (scrolls[2].hasClients) scrolls[2].jumpTo(0);
-  }
   final scrolls = List.generate(3, (_) => ScrollController());
   @override
   void dispose() { for (final s in scrolls) { s.dispose(); } super.dispose(); }
@@ -425,7 +419,7 @@ class _ShopViewportState extends State<ShopViewport> {
       Expanded(child: Align(alignment: Alignment.centerLeft, child: SkinPanel(skin: Skin.parchment, child: Padding(padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         child: Text(widget.dayLabel, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Color(0xff392433), fontSize: 14, fontWeight: FontWeight.bold)))))),
       if (widget.guildLabel != null) Padding(padding: const EdgeInsets.only(right: 12),
-        child: SkinPanel(skin: Skin.parchment, child: TextButton(onPressed: openGuildOrder,
+        child: SkinPanel(skin: Skin.parchment, child: TextButton(onPressed: () => menu(2),
           child: Text(widget.guildLabel!, style: const TextStyle(color: Color(0xff392433), fontSize: 13))))),
       SkinPanel(skin: Skin.dialogue, child: Padding(padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
         child: Row(mainAxisSize: MainAxisSize.min, children: [const GameIcon(GameGlyph.coin, size: 24), const SizedBox(width: 6), Text(widget.goldLabel, style: const TextStyle(color: worldGold, fontSize: 18))]))),
@@ -464,7 +458,7 @@ class _ShopViewportState extends State<ShopViewport> {
                   page(0, widget.dialogue),
                   page(1, widget.workbench ?? const Text('연구와 제조를 준비하고 있어요.')),
                   page(2, Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-                    if (widget.management != null) KeyedSubtree(key: ValueKey(guildVisit), child: widget.management!), ...widget.actions,
+                    if (widget.management != null) widget.management!, ...widget.actions,
                   ])),
                 ])),
               ])),

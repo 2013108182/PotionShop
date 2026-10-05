@@ -1,9 +1,0 @@
-  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
-                                 Dload  Upload   Total   Spent    Left  Speed
-
-  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0
-  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0
-curl: (56) CONNECT tunnel failed, response 403
-Downloading Linux x64 Dart SDK from Flutter engine 692136cb6582dbfc5af3fb33c2515a069f2f66d0...
-
-exit_code=56
